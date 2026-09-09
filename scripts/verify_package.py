@@ -13,6 +13,7 @@ archive = ROOT / 'dist' / platform['archiveFileName']
 assert str(archive.stat().st_size) == platform['size']
 assert 'SHA-256:' + hashlib.sha256(archive.read_bytes()).hexdigest() == platform['checksum']
 assert platform['architecture'] == 'esp32'
+assert platform['name'] == 'RB_Nexus'
 assert platform['boards'] == [{'name': 'RB_Nexus'}]
 lookup = {(t['name'], t['version']): t for t in pkg['tools']}
 for dep in platform['toolsDependencies']:
@@ -29,6 +30,9 @@ with zipfile.ZipFile(archive) as z:
                  'variants/rb_nexus/pins_arduino.h', 'LICENSE.md',
                  'libraries/RB_Nexus/src/RB_Nexus.h']:
         assert root + file in z.namelist(), file
+    assert 'name=RB_Nexus\n' in z.read(root + 'platform.txt').decode()
+    for example in (ROOT / 'libraries/RB_Nexus/examples').glob('*/*.ino'):
+        assert root + example.relative_to(ROOT).as_posix() in z.namelist()
     boards = z.read(root + 'boards.txt').decode()
     props = dict(line.split('=', 1) for line in boards.splitlines() if '=' in line and not line.startswith('#'))
     assert props['rb_nexus.name'] == 'RB_Nexus'

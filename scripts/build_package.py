@@ -59,7 +59,7 @@ def build(archive, repository, output):
                     if line.startswith('menu.') and line.split('=', 1)[0][5:] in menus]
     entries['boards.txt'] = ((NOTICE + '\n'.join(menu_headers + [''] + properties) + '\n').encode(), 0o100644 << 16)
     platform = entries['platform.txt'][0].decode()
-    platform = re.sub(r'^name=.*$', 'name=RB_Nexus ESP32 Boards', platform, count=1, flags=re.M)
+    platform = re.sub(r'^name=.*$', 'name=RB_Nexus', platform, count=1, flags=re.M)
     platform = re.sub(r'^version=.*$', f'version={VERSION}', platform, count=1, flags=re.M)
     entries['platform.txt'] = ((NOTICE + platform).encode(), 0o100644 << 16)
     pins = entries['variants/esp32/pins_arduino.h'][0]
@@ -85,7 +85,7 @@ def build(archive, repository, output):
     repo_url = f'https://github.com/{repository}'
     deps = [dict(d, packager='RB_Nexus') for d in UPSTREAM['toolsDependencies']]
     platform_info = {
-        'name': 'RB_Nexus ESP32 Boards', 'architecture': 'esp32', 'version': VERSION,
+        'name': 'RB_Nexus', 'architecture': 'esp32', 'version': VERSION,
         'category': 'Contributed',
         'url': f'{repo_url}/releases/download/v{VERSION}/{archive_name}',
         'archiveFileName': archive_name,

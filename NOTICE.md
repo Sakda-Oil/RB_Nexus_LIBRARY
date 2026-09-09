@@ -1,6 +1,6 @@
 # Source and changes
 
-RB_Nexus package 0.1.0 is maintained by Sakda-Oil.
+RB_Nexus package 0.1.1 is maintained by Sakda-Oil.
 
 It redistributes the Arduino-ESP32 3.3.10 platform from Espressif Systems:
 https://github.com/espressif/arduino-esp32/tree/3.3.10
@@ -12,8 +12,10 @@ their own licenses. RB_Nexus additions use LGPL-2.1-or-later.
 
 Changes dated 2026-09-09:
 - Replace the board list with RB_Nexus, derived from ESP32 Dev Module.
-- Rename platform and set RB_Nexus package version to 0.1.0.
+- Rename platform and set RB_Nexus package version to 0.1.1.
 - Add a generic ESP32 pin variant with an explicit pending-peripheral-map notice.
+- Display both platform and board as RB_Nexus.
+- Add SerialEcho, WiFiScan, DigitalInput, AnalogInput, PWMOutput and I2CScanner examples.
 - Default serial upload speed to 115200 baud.
 - Add RB_Nexus identification header, examples and documentation.
 

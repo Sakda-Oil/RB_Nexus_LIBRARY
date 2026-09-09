@@ -38,8 +38,7 @@ jobs:
           arduino-cli core update-index --additional-urls "$index"
           version=$(cat VERSION)
           arduino-cli core install "RB_Nexus:esp32@$version" --additional-urls "$index"
-          arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus libraries/RB_Nexus/examples/BoardInfo
-          arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus libraries/RB_Nexus/examples/CompileCheck
+          python3 scripts/compile_examples.py
           arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus:FlashSize=8M,PartitionScheme=default_8MB libraries/RB_Nexus/examples/BoardInfo
       - name: Publish immutable release
         env:
