@@ -14,6 +14,7 @@ if args.config_file:
     cli += ['--config-file', args.config_file]
 # Compiler-only fixtures: these GPIOs do not assert a RB_Nexus connector mapping.
 configured = {
+    'Blink': '-DRB_EXAMPLE_LED_PIN=25',
     'DigitalInput': '-DRB_EXAMPLE_INPUT_PIN=27',
     'AnalogInput': '-DRB_EXAMPLE_ADC_PIN=34',
     'PWMOutput': '-DRB_EXAMPLE_PWM_PIN=25',

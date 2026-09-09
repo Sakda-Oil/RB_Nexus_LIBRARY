@@ -13,7 +13,7 @@ https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nex
 
 1. เปิด Arduino IDE 2 แล้วเข้า Settings / Preferences
 2. เพิ่มลิงก์ข้างต้นใน **Additional Boards Manager URLs** โดยเก็บลิงก์เดิมไว้
-3. เปิด **Boards Manager** ค้นหา **RB_Nexus** และติดตั้งเวอร์ชัน 0.1.1
+3. เปิด **Boards Manager** ค้นหา **RB_Nexus** และติดตั้งเวอร์ชัน 0.1.2
 4. เลือก **Tools > Board > RB_Nexus > RB_Nexus**
 5. เลือก **Tools > Port** ให้ตรงกับบอร์ด
 6. เปิด **File > Examples > RB_Nexus > BoardInfo** แล้วอัปโหลด
@@ -42,7 +42,7 @@ https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nex
 RB_Nexus รุ่นนี้ใช้เฉพาะ ESP32-WROOM-32; ESP32-S3/C3 เป็นคนละชิปและต้องมี
 board definition ของรุ่นนั้นโดยเฉพาะ
 
-## ขอบเขตรุ่น 0.1.1
+## ขอบเขตรุ่น 0.1.2
 
 รุ่นนี้เป็นแพ็กเกจเลือกบอร์ด คอมไพล์ และอัปโหลด พร้อมตัวอย่างพื้นฐานด้านล่าง
 ยังไม่ได้ทดสอบการอัปโหลดกับฮาร์ดแวร์ RB_Nexus จริง
@@ -69,7 +69,7 @@ python3 scripts/verify_package.py
 ```
 
 สคริปต์ดาวน์โหลด core เวอร์ชันที่ล็อกไว้ ตรวจ SHA-256 และสร้างไฟล์ใน dist/:
-- RB_Nexus-esp32-0.1.1.zip สำหรับแนบ GitHub Release
+- RB_Nexus-esp32-0.1.2.zip สำหรับแนบ GitHub Release
 - package_RB_Nexus_index.json สำหรับวางที่ root ของ branch main
 
 ต้องนำ JSON และ ZIP จากการ build รอบเดียวกันมาใช้คู่กัน ห้ามแก้ checksum เอง
@@ -77,7 +77,7 @@ ZIP เป็นแบบไม่บีบอัดเพื่อให้ che
 
 Workflow **Build and release** ทำงานเมื่อ push main หรือสั่ง Run workflow:
 ตรวจ build → ติดตั้งแพ็กเกจผ่าน local HTTP ใน runner → compile ตัวอย่าง →
-สร้าง Release v0.1.1 และแนบ ZIP/JSON → อัปเดต index ที่ root ของ main
+สร้าง Release v0.1.2 และแนบ ZIP/JSON → อัปเดต index ที่ root ของ main
 หาก Release เวอร์ชันเดิมมีแล้ว workflow จะไม่เขียนทับไฟล์ ควรเพิ่ม VERSION
 และเวอร์ชันไลบรารีก่อนเผยแพร่รอบใหม่
 
@@ -97,6 +97,7 @@ Workflow **Build and release** ทำงานเมื่อ push main หร�
 
 | Example | การใช้งาน |
 | --- | --- |
+| Blink | ไฟติด/ดับทุก 500 ms โดยกำหนด GPIO ของ LED เอง |
 | BoardInfo | แสดงชื่อบอร์ด ชิป Flash และ CPU |
 | SerialEcho | พิมพ์ข้อความใน Serial Monitor แล้วรับข้อความเดิมกลับ |
 | WiFiScan | สแกน Wi-Fi 2.4 GHz โดยไม่ต้องใส่รหัสผ่าน |
@@ -106,7 +107,7 @@ Workflow **Build and release** ทำงานเมื่อ push main หร�
 | I2CScanner | ค้นหา address อุปกรณ์บนบัส I2C |
 | CompileCheck | ตรวจการคอมไพล์แพ็กเกจสำหรับผู้พัฒนา |
 
-ตัวอย่าง DigitalInput, AnalogInput, PWMOutput และ I2CScanner เริ่มต้นด้วยขา `-1`
+ตัวอย่าง Blink, DigitalInput, AnalogInput, PWMOutput และ I2CScanner เริ่มต้นด้วยขา `-1`
 เพื่อให้เปิดและคอมไพล์ได้ก่อน เมื่ออัปโหลดโดยยังไม่กำหนดขา จะแสดงข้อความทาง Serial
 และยังไม่เริ่มใช้งาน GPIO ให้แก้ค่า `#define RB_EXAMPLE_..._PIN -1` ด้านบนของ sketch
 เป็น GPIO ตามวงจรจริง ตรวจว่าขานั้นไม่ถูกใช้งานโดยวงจรอื่นอยู่แล้ว
@@ -117,5 +118,18 @@ Workflow **Build and release** ทำงานเมื่อ push main หร�
 
 ## อัปเดตจาก 0.1.0
 
-ใช้ลิงก์ Boards Manager เดิม ค้นหา **RB_Nexus** แล้วเลือกอัปเดตเป็น **0.1.1**
+ใช้ลิงก์ Boards Manager เดิม ค้นหา **RB_Nexus** แล้วเลือกอัปเดตเป็น **0.1.2**
 ชื่อแพ็กเกจและชื่อบอร์ดแสดงเป็น **RB_Nexus** โดยไม่มีคำต่อท้าย
+
+## Blink: ไฟกระพริบ
+
+เปิด **File > Examples > RB_Nexus > Blink** แล้วเปลี่ยนค่า
+`#define RB_EXAMPLE_LED_PIN -1` เป็น GPIO ที่ต่อกับ LED จริง
+ไฟจะติด 500 ms และดับ 500 ms ปรับเวลาได้ที่ `BLINK_INTERVAL_MS`
+ถ้า LED ติดเมื่อ GPIO เป็น LOW ให้ตั้ง `LED_ACTIVE_LOW = true`
+ตัวอย่างนี้ใช้ LED ธรรมดา ไม่ใช่ LED RGB แบบ addressable
+
+เมื่อใช้ LED ภายนอก ต่อ GPIO ผ่านตัวต้านทาน 330 ohm เข้าขา Anode (+)
+และต่อ Cathode (-) ไป GND ใช้ขาที่ตรวจสอบแล้วว่าว่างและเป็น output ได้
+หากยังใช้ค่า -1 ตัวอย่างจะแสดงข้อความใน Serial Monitor ที่ 115200 baud
+และไม่สั่งงาน GPIO เพราะยังไม่มีผังขา LED บนบอร์ด RB_Nexus
