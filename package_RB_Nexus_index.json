@@ -9,14 +9,14 @@
       },
       "platforms": [
         {
-          "name": "RB_Nexus ESP32 Boards",
+          "name": "RB_Nexus",
           "architecture": "esp32",
-          "version": "0.1.0",
+          "version": "0.1.1",
           "category": "Contributed",
-          "url": "https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/download/v0.1.0/RB_Nexus-esp32-0.1.0.zip",
-          "archiveFileName": "RB_Nexus-esp32-0.1.0.zip",
-          "checksum": "SHA-256:68a5b29910238ff494a23f5fd585c7f593b5749a1d6ae9459a36962b67ebc046",
-          "size": "68277757",
+          "url": "https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/download/v0.1.1/RB_Nexus-esp32-0.1.1.zip",
+          "archiveFileName": "RB_Nexus-esp32-0.1.1.zip",
+          "checksum": "SHA-256:8461e6e4c92dabfe1f461dab0f958e8900ac9f6211554bf5ac19a17b89ca9e0d",
+          "size": "68288668",
           "boards": [
             {
               "name": "RB_Nexus"
