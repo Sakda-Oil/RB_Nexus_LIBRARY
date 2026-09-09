@@ -1,0 +1,65 @@
+name: Build and release
+on:
+  push:
+    branches: [main]
+    paths-ignore: [package_RB_Nexus_index.json]
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: rb-nexus-release
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Build and verify archive
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 scripts/build_package.py --repository "$REPOSITORY"
+          python3 scripts/verify_package.py
+          python3 scripts/local_test_index.py
+      - name: Install and compile the actual package
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory dist > /tmp/rb-nexus-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent http://127.0.0.1:8765/package_RB_Nexus_test_index.json > /dev/null; then break; fi
+            sleep 1
+          done
+          index=http://127.0.0.1:8765/package_RB_Nexus_test_index.json
+          arduino-cli core update-index --additional-urls "$index"
+          version=$(cat VERSION)
+          arduino-cli core install "RB_Nexus:esp32@$version" --additional-urls "$index"
+          arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus libraries/RB_Nexus/examples/BoardInfo
+          arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus libraries/RB_Nexus/examples/CompileCheck
+          arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus:FlashSize=8M,PartitionScheme=default_8MB libraries/RB_Nexus/examples/BoardInfo
+      - name: Publish immutable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          version=$(cat VERSION)
+          tag="v$version"
+          if gh release view "$tag" --repo "$REPOSITORY" > /dev/null 2>&1; then
+            echo "Release $tag already exists. Increase VERSION before publishing a new archive."
+            exit 1
+          fi
+          printf '%s\n' 'RB_Nexus ESP32-WROOM-32 board package.' 'Based on Arduino-ESP32 3.3.10.' 'Board installation and compilation tested in CI. Hardware upload and peripheral mapping remain unverified.' > /tmp/release-notes.md
+          gh release create "$tag" "dist/RB_Nexus-esp32-$version.zip" dist/package_RB_Nexus_index.json --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "RB_Nexus $version" --notes-file /tmp/release-notes.md
+          cp dist/package_RB_Nexus_index.json package_RB_Nexus_index.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package_RB_Nexus_index.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish RB_Nexus $version board index"
+            git pull --rebase origin main
+            git push origin HEAD:main
+          fi
