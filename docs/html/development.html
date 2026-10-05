@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การพัฒนาบอร์ด (Development) — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link active">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>แนวทางการพัฒนาและการคอมไพล์แพ็กเกจ (Development Workflow)</h1>
+      <p style="color: var(--text-muted);">โครงสร้างไฟล์ การสร้างแพ็กเกจ Arduino Board Manager และการใช้งาน arduino-cli แบบอัตโนมัติ</p>
+    </header>
+
+    <h2>1. โครงสร้างโฟลเดอร์ของโปรเจกต์ (Repository Structure)</h2>
+    <div class="code-container">
+      <pre><code>RB_Nexus_LIBRARY/
+├── boards/esp32/             # คอนฟิกบอร์ด Arduino Board Definition
+│   ├── boards.txt            # นิยามพารามิเตอร์คอมไพล์ esp32:RB_Nexus
+│   ├── platform.txt          # เมนูและคอมไพเลอร์แฟล็ก
+│   └── variants/RB_Nexus/    # ไฟล์ pins_arduino.h สำหรับ ESP32 WROOM-32
+├── libraries/RB_Nexus/       # ซอร์สโค้ดไลบรารีหลัก
+│   ├── library.properties    # เมทาดาทาของไลบรารี
+│   ├── src/
+│   │   ├── RB_Nexus.h        # คลาสและฟังก์ชันฮาร์ดแวร์
+│   │   ├── RB_Nexus.cpp
+│   │   ├── RB_Nexus_Pins.h   # แหล่งอ้างอิงพินพินเดี่ยว (Single Source of Truth)
+│   │   └── RB_Nexus_MicroROS.h # รหัสเชื่อมต่อ micro-ROS
+│   └── examples/             # สเก็ตช์ตัวอย่างกว่า 30 ตัวอย่าง
+├── scripts/                  # สคริปต์อัตโนมัติของวิศวกร
+│   ├── build_package.py      # รวมไฟล์เป็น .zip คำนวณ SHA-256 และสร้าง JSON index
+│   ├── verify_package.py     # ตรวจสอบความถูกต้องของ index json
+│   └── compile_all_examples.py # คอมไพล์ทดสอบทุกตัวอย่างด้วย arduino-cli
+├── docs/                     # เอกสารเชิงเทคนิคและเว็บคู่มือ
+└── package_RB_Nexus_index.json # ไฟล์ดัชนีสำหรับใส่ใน Preferences ของ Arduino IDE</code></pre>
+    </div>
+
+    <h2>2. สคริปต์สร้างแพ็กเกจ (build_package.py)</h2>
+    <p>สคริปต์ Python สำหรับบิลด์ไฟล์ติดตั้ง Arduino Boards Manager อัตโนมัติ โดยจะดึงเวอร์ชันจากไฟล์ <code>VERSION</code> ทำการบีบอัด zip คำนวณ SHA-256 Checksum และขนาดไฟล์ byte size แล้วสร้างไฟล์ <code>package_RB_Nexus_index.json</code>:</p>
+    <div class="code-container">
+      <pre><code>python3 scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
+python3 scripts/verify_package.py</code></pre>
+    </div>
+
+    <h2>3. การใช้งาน arduino-cli เพื่อคอมไพล์และทดสอบ</h2>
+    <p>นักพัฒนาสามารถคอมไพล์โค้ดได้โดยตรงจากเทอร์มินัลโดยไม่ต้องเปิด GUI:</p>
+    <div class="code-container">
+      <pre><code># คอมไพล์สเก็ตช์ตัวอย่าง Blink ด้วยบอร์ด RB_Nexus
+arduino-cli compile --fqbn RB_Nexus:esp32:RB_Nexus libraries/RB_Nexus/examples/Blink/Blink.ino
+
+# คอมไพล์และอัปโหลดเข้าบอร์ด
+arduino-cli compile --upload -p /dev/ttyUSB0 --fqbn RB_Nexus:esp32:RB_Nexus libraries/RB_Nexus/examples/FullBoardTest/FullBoardTest.ino</code></pre>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

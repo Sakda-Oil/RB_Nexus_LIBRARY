@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตัวอย่างโค้ด (Examples) — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link active">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>ตัวอย่างโค้ดใช้งาน (Examples)</h1>
+      <p style="color: var(--text-muted);">แค็ตตาล็อกตัวอย่างโค้ด Arduino และ micro-ROS รวมกว่า 30 ตัวอย่าง ครอบคลุมทุกระบบฮาร์ดแวร์</p>
+    </header>
+
+    <h2>1. ตัวอย่างฮาร์ดแวร์พื้นฐาน & Subsystems</h2>
+    <p>เปิดได้จากเมนู <code>File &gt; Examples &gt; RB_Nexus &gt; ...</code> ใน Arduino IDE</p>
+
+    <div class="grid">
+      <div class="card">
+        <h3>01. Blink & BoardInfo</h3>
+        <p>ทดสอบไฟ LED สถานะ (GPIO 2) และอ่านค่าสเปคบอร์ด, สเปค ESP32 LX6, ชิปไอดี และเวอร์ชันแพ็กเกจ</p>
+        <span class="badge badge-pass">QC Verified</span>
+      </div>
+
+      <div class="card">
+        <h3>02. I2C Scanner</h3>
+        <p>สแกนบัส I2C (SDA=21, SCL=22) ตรวจสอบการเชื่อมต่อของชิป PCA9685 (0x40) และเซนเซอร์ IMU</p>
+        <span class="badge badge-pass">QC Verified</span>
+      </div>
+
+      <div class="card">
+        <h3>03. FullBoardTest & SelfTest</h3>
+        <p>ชุดทดสอบระบบอัตโนมัติครบวงจร ตรวจสอบ I/O, I2C, SPI MCP3208, การขับมอเตอร์ และพัลส์เอนโค้ดเดอร์</p>
+        <span class="badge badge-pass">QC Verified</span>
+      </div>
+
+      <div class="card">
+        <h3>04. MotorTest & MotorPID</h3>
+        <p>ทดสอบหมุนมอเตอร์ M1–M4 และการควบคุมความเร็วรอบแบบ Closed-loop PID ร่วมกับสัญญาณเอนโค้ดเดอร์</p>
+        <span class="badge badge-warn">M4 Pass / M2 One-way</span>
+      </div>
+
+      <div class="card">
+        <h3>05. ServoTest</h3>
+        <p>กวาดมุมเซอร์โวมอเตอร์ 8 แชนแนล (CH8 ถึง CH15) จาก 0 ถึง 180 องศา ผ่านชิป PCA9685</p>
+        <span class="badge badge-pass">QC Verified</span>
+      </div>
+
+      <div class="card">
+        <h3>06. EncoderTest</h3>
+        <p>นับจำนวนพัลส์ Quadrature Encoder 4 ชุด (ENC1..ENC4) แสดงผลผ่าน Serial Monitor / Plotter</p>
+        <span class="badge badge-pass">QC Verified</span>
+      </div>
+
+      <div class="card">
+        <h3>07. AnalogMCP3208</h3>
+        <p>อ่านค่าแรงดันอนาล็อก 12-bit จากพอร์ต A1 ถึง A8 ผ่านชิป ADC MCP3208 บัส SPI</p>
+        <span class="badge badge-warn">Circuit Verification</span>
+      </div>
+
+      <div class="card">
+        <h3>08. DigitalIO & ButtonDebounce</h3>
+        <p>ใช้งานพอร์ตดิจิทัล D4, D12, D14, D26, D27 โหมด INPUT_PULLUP, OUTPUT พร้อมซอฟต์แวร์ดีบาวน์</p>
+        <span class="badge badge-pass">QC Verified</span>
+      </div>
+
+      <div class="card">
+        <h3>09. CANLoopback & IMURaw</h3>
+        <p>ทดสอบรับส่งข้อมูล CAN Bus (TWAI) และการสื่อสารกับโมดูลเซนเซอร์ความเฉื่อย 6-DOF (MPU6050/BMI160)</p>
+        <span class="badge badge-warn">Pending Schematic</span>
+      </div>
+    </div>
+
+    <h2>2. ตัวอย่างหุ่นยนต์ micro-ROS (ROS 2 Humble / Jazzy)</h2>
+    <p>เปิดได้จากเมนู <code>File &gt; Examples &gt; RB_Nexus &gt; micro_ros &gt; ...</code></p>
+    <table>
+      <thead>
+        <tr>
+          <th>ตัวอย่าง</th>
+          <th>ROS 2 Topic / Service</th>
+          <th>คำอธิบายหน้าที่</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>01_Publisher</strong></td>
+          <td><code>/rb_nexus/chatter</code> (std_msgs/String)</td>
+          <td>ส่งข้อความสถานะและ heartbeat สู่เครือข่าย ROS 2</td>
+        </tr>
+        <tr>
+          <td><strong>02_Subscriber</strong></td>
+          <td><code>/rb_nexus/led_cmd</code> (std_msgs/Bool)</td>
+          <td>รับคำสั่งจาก ROS 2 ควบคุมไฟ LED บนบอร์ด</td>
+        </tr>
+        <tr>
+          <td><strong>03_CmdVelDiffDrive</strong></td>
+          <td><code>/cmd_vel</code> (geometry_msgs/Twist)</td>
+          <td>รับคำสั่งความเร็วเชิงเส้นและเชิงมุม ขับเคลื่อนล้อซ้าย-ขวา</td>
+        </tr>
+        <tr>
+          <td><strong>04_JointStates</strong></td>
+          <td><code>/joint_states</code> (sensor_msgs/JointState)</td>
+          <td>ส่งตำแหน่งและมุมล้อจากการอ่านเอนโค้ดเดอร์</td>
+        </tr>
+        <tr>
+          <td><strong>05_ImuPublisher</strong></td>
+          <td><code>/imu/data_raw</code> (sensor_msgs/Imu)</td>
+          <td>ส่งข้อมูลความเร่งและอัตราหมุนรอบแกนของบอร์ด</td>
+        </tr>
+        <tr>
+          <td><strong>06_OdomPublisher</strong></td>
+          <td><code>/odom</code> (nav_msgs/Odometry)</td>
+          <td>คำนวณ Dead Reckoning และส่งพิกัดตำแหน่งหุ่นยนต์ X, Y, Yaw</td>
+        </tr>
+        <tr>
+          <td><strong>07_BatteryState</strong></td>
+          <td><code>/battery_state</code> (sensor_msgs/BatteryState)</td>
+          <td>ตรวจวัดระดับแรงดันแบตเตอรี่ผ่านชิป ADC MCP3208</td>
+        </tr>
+        <tr>
+          <td><strong>08_RangeSensors</strong></td>
+          <td><code>/range/sonar</code> (sensor_msgs/Range)</td>
+          <td>อ่านค่าเซนเซอร์วัดระยะทางเพื่อหลบหลีกสิ่งกีดขวาง</td>
+        </tr>
+        <tr>
+          <td><strong>09_TwistMecanum</strong></td>
+          <td><code>/cmd_vel</code> (geometry_msgs/Twist)</td>
+          <td>จลนศาสตร์ขับเคลื่อน 4 ล้ออิสระ (Mecanum / Omni-wheel)</td>
+        </tr>
+        <tr>
+          <td><strong>10_MotorVelocityClosedLoop</strong></td>
+          <td><code>/motor_vel_targets</code>, <code>/joint_states</code></td>
+          <td>ควบคุมความเร็วมอเตอร์รอบปิด PID ตามความเร็วเป้าหมายจาก ROS 2</td>
+        </tr>
+        <tr>
+          <td><strong>11_ServoControlService</strong></td>
+          <td><code>/set_servo_angle</code> (Service)</td>
+          <td>บริการ ROS 2 Service กำหนดองศาเซอร์โวมอเตอร์</td>
+        </tr>
+        <tr>
+          <td><strong>12_EmergencyStopService</strong></td>
+          <td><code>/emergency_stop</code> (std_srvs/Trigger)</td>
+          <td>บริการตัดการทำงานของมอเตอร์ทั้งหมดทันทีเมื่อเกิดเหตุฉุกเฉิน</td>
+        </tr>
+        <tr>
+          <td><strong>13_SetPidService</strong></td>
+          <td><code>/set_pid_constants</code> (Service)</td>
+          <td>ปรับจูนพารามิเตอร์ Kp, Ki, Kd แบบเรียลไทม์ไม่ต้องคอมไพล์ใหม่</td>
+        </tr>
+        <tr>
+          <td><strong>14_DiagnosticsPublisher</strong></td>
+          <td><code>/diagnostics</code> (diagnostic_msgs/DiagnosticArray)</td>
+          <td>รายงานสถานะสุขภาพบอร์ด, อุณหภูมิ, วอทช์ด็อก และแรงดันไฟ</td>
+        </tr>
+        <tr>
+          <td><strong>15_WifiTransport</strong></td>
+          <td>UDP Wi-Fi Transport</td>
+          <td>สื่อสารกับ ROS 2 Agent ไร้สายผ่าน Wi-Fi (IP/Port)</td>
+        </tr>
+        <tr>
+          <td><strong>16_CustomQoS</strong></td>
+          <td>Best Effort / Reliable QoS</td>
+          <td>การตั้งค่า Quality of Service สำหรับข้อมูลเซนเซอร์ความถี่สูง</td>
+        </tr>
+        <tr>
+          <td><strong>17_WatchdogRecovery</strong></td>
+          <td>Safety State-Machine</td>
+          <td>ตัดการขับเคลื่อนอัตโนมัติหากไม่ได้รับ /cmd_vel นานเกิน 1 วินาที</td>
+        </tr>
+        <tr>
+          <td><strong>18_SerialTransport</strong></td>
+          <td>USB-UART Serial (115200)</td>
+          <td>การสื่อสารมาตรฐานผ่านสาย USB Serial ไปยัง PC หรือ Raspberry Pi</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

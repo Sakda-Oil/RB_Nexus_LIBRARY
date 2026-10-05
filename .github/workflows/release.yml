@@ -51,7 +51,7 @@ jobs:
             echo "Release $tag already exists. Increase VERSION before publishing a new archive."
             exit 1
           fi
-          printf '%s\n' 'RB_Nexus ESP32-WROOM-32 board package.' 'Based on Arduino-ESP32 3.3.10.' 'Board installation and compilation tested in CI. Hardware upload and peripheral mapping remain unverified.' > /tmp/release-notes.md
+          printf '%s\n' 'RB_Nexus ESP32-WROOM-32 board package v0.2.0.' 'Based on Arduino-ESP32 3.3.10.' 'Complete driver suite, hardware test suite, interactive QC docs, and 18 micro-ROS examples. Physical QC verified on V0.1 hardware for LED, Digital I/O, Encoders 1-4, Servos 8-15, and Motor 4.' > /tmp/release-notes.md
           gh release create "$tag" "dist/RB_Nexus-esp32-$version.zip" dist/package_RB_Nexus_index.json --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "RB_Nexus $version" --notes-file /tmp/release-notes.md
           cp dist/package_RB_Nexus_index.json package_RB_Nexus_index.json
           git config user.name 'github-actions[bot]'

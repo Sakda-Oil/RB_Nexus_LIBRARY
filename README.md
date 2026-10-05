@@ -1,135 +1,136 @@
 # RB_Nexus
 
-แพ็กเกจบอร์ด RB_Nexus สำหรับ Arduino IDE / Boards Manager
-ใช้ ESP32-WROOM-32 ตามสเปคฮาร์ดแวร์รุ่น 0.1 และ Arduino-ESP32 core 3.3.10
+แพ็กเกจบอร์ดและไลบรารี RB_Nexus สำหรับ Arduino IDE / Boards Manager  
+สำหรับบอร์ดหุ่นยนต์ **RB Nexus V0.1** (ESP32-WROOM-32 Dual Core 240MHz, 4MB Flash, USB-UART CH340, USB-C)  
+พัฒนาบนสถาปัตยกรรม **Arduino-ESP32 Core 3.3.10 (ESP-IDF 5.1)** พร้อมระบบควบคุมหุ่นยนต์เต็มรูปแบบและรองรับ **ROS 2 Humble / Jazzy (micro-ROS)**
 
-## ติดตั้งบนเครื่องอื่น
+---
 
-ใช้ลิงก์เดิมนี้เพื่อรับเวอร์ชันล่าสุดใน Additional Boards Manager URLs:
+## เอกสารประกอบทางเทคนิค (Documentation & Interactive Portals)
+
+- 📖 **[Interactive HTML Documentation](docs/html/index.html)** — เว็บไซต์คู่มือเชิงเทคนิคฉบับสมบูรณ์ (14 หน้า)
+- 📌 **[Interactive Pinout Table](docs/pin_mapping.html)** — ตารางผังขาแบบฟิลเตอร์และค้นหาได้
+- ✅ **[Hardware QC Test Checklist](docs/hardware_test_checklist.html)** — เช็กลิสต์ตรวจรับบอร์ดหน้างานสำหรับฝ่ายผลิตและ QC
+- 📊 **[Validation Report (V0.1)](docs/VALIDATION_REPORT.md)** — รายงานการทดสอบทางวิศวกรรม ตอบครบทั้ง 5 ข้อกำหนดหลัก
+
+---
+
+## การติดตั้งใน Arduino IDE (Installation)
+
+ใส่ลิงก์นี้ในช่อง **Additional Boards Manager URLs** ในการตั้งค่า (Settings/Preferences) ของ Arduino IDE:
 
 ```text
 https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nexus_index.json
 ```
 
-1. เปิด Arduino IDE 2 แล้วเข้า Settings / Preferences
-2. เพิ่มลิงก์ข้างต้นใน **Additional Boards Manager URLs** โดยเก็บลิงก์เดิมไว้
-3. เปิด **Boards Manager** ค้นหา **RB_Nexus** และติดตั้งเวอร์ชัน 0.1.2
-4. เลือก **Tools > Board > RB_Nexus > RB_Nexus**
-5. เลือก **Tools > Port** ให้ตรงกับบอร์ด
-6. เปิด **File > Examples > RB_Nexus > BoardInfo** แล้วอัปโหลด
-7. เปิด Serial Monitor ที่ **115200 baud**
+1. เปิด Arduino IDE (เวอร์ชัน 2.x ขึ้นไป)
+2. ไปที่ **Preferences** (หรือ Settings)
+3. วาง URL ด้านบนลงในช่อง **Additional Boards Manager URLs**
+4. เปิดเมนู **Boards Manager** (ไอคอนบอร์ดทางซ้ายมือ)
+5. พิมพ์ค้นหา `RB_Nexus` แล้วกด **Install** เวอร์ชันล่าสุด
+6. ไปที่เมนู **Tools > Board > RB_Nexus > RB_Nexus**
+7. เลือกพอร์ต Serial USB (**Tools > Port**)
+8. เปิดตัวอย่าง **File > Examples > RB_Nexus > FullBoardTest** หรือ **RB_Nexus_SelfTest** แล้วกด Upload
 
-แพ็กเกจนี้มี core และไลบรารีมาตรฐานของ ESP32 รวมถึง RB_Nexus.h
-เครื่องมือคอมไพล์จะดาวน์โหลดจากแหล่งเดิมของ Espressif โดยอัตโนมัติ
-ไม่ต้องเพิ่มลิงก์ Friend Robot หรือติดตั้ง core ESP32 แยกก่อน
-ต้องเชื่อมต่ออินเทอร์เน็ตระหว่างติดตั้งครั้งแรก
+---
 
-## ค่าเริ่มต้นและการเลือกบอร์ด
+## ผังขาและฮาร์ดแวร์ RB Nexus V0.1
 
-| รายการ | ค่าเริ่มต้น |
-| --- | --- |
-| ชื่อบอร์ด | RB_Nexus |
-| MCU | ESP32 รุ่นดั้งเดิม / ESP32-WROOM-32 |
-| CPU | 240 MHz |
-| Flash | 4 MB, DIO, 40 MHz (ต้องตรวจให้ตรงกับโมดูลจริง) |
-| PSRAM | Disabled |
-| Upload Speed | 115200 |
-| Partition | Default 4MB with SPIFFS |
-| FQBN | RB_Nexus:esp32:rb_nexus |
+| ส่วนการทำงาน | ช่อง / ขาที่เชื่อมต่อ | สถานะ Hardware จริง | รายละเอียด |
+| :--- | :--- | :---: | :--- |
+| **Status LED** | GPIO 2 | ✅ **PASS** | ไฟสถานะ LED บนบอร์ด (Active HIGH) |
+| **Digital I/O** | GPIO 4, 12, 14, 26, 27 | ✅ **PASS** | ดิจิทัล I/O รองรับทั้ง `INPUT_PULLUP` และ `OUTPUT` |
+| **Quadrature Encoders** | ENC1: GPIO 36, 39<br>ENC2: GPIO 34, 35<br>ENC3: GPIO 32, 33<br>ENC4: GPIO 25, 13 | ✅ **PASS** | นับพัลส์ 4 ล้ออิสระด้วย Hardware Interrupt ของ ESP32 |
+| **Servo Outputs (8 ช่อง)** | PCA9685 I2C (0x40): CH8–CH15 | ✅ **PASS** | เอาต์พุตพัลส์มาตรฐาน 50 Hz สำหรับ RC Servos มุม 0–180° |
+| **DC Motor 4 (M4)** | PCA9685 I2C (0x40): CH6, CH7 | ✅ **PASS** | ขับหมุนเดินหน้า ถอยหลัง เบรก และหยุดได้สมบูรณ์ |
+| **DC Motor 2 (M2)** | PCA9685 I2C (0x40): CH2, CH3 | ⚠️ **PARTIAL** | หมุนได้ทิศทางเดียว (ลายวงจร CH3 ขาดบน V0.1) |
+| **DC Motor 1, 3 (M1, M3)**| PCA9685 I2C (0x40): CH0,1 / CH4,5 | ❌ **FAIL** | มอเตอร์ไม่หมุน (ลายวงจรหรือเกต H-Bridge ไม่ตอบสนอง) |
+| **MCP3208 12-bit ADC** | SPI (MOSI: 23, MISO: 19, SCK: 18, CS: 5) | ⚠️ **PENDING** | การสื่อสาร SPI ปกติ อยู่ระหว่างรอ Schematic เทียบสเกลแรงดัน |
+| **I2C Bus** | SDA: GPIO 21, SCL: GPIO 22 | ✅ **PASS** | ตรวจพบชิป PCA9685 ที่แอดเดรส 0x40 |
+| **CAN Bus (TWAI)** | RB_PIN_UNDEFINED (-1) | ⚠️ **UNVERIFIED** | ซอฟต์แวร์พร้อม รอชิป CAN Transceiver บน PCB |
+| **IMU (6-DOF)** | I2C Auto-probe (0x68, 0x69) | ⚠️ **UNVERIFIED** | ซอฟต์แวร์พร้อม Auto-probe ป้องกันการแฮงก์ |
 
-ปรับ CPU, Flash Size, Flash Mode, Partition Scheme, PSRAM และ Upload Speed
-ในเมนู Tools ได้ บอร์ด ESP32 เดิมจากแพ็กเกจอื่นยังเลือกใช้งานได้ตามปกติ
-RB_Nexus รุ่นนี้ใช้เฉพาะ ESP32-WROOM-32; ESP32-S3/C3 เป็นคนละชิปและต้องมี
-board definition ของรุ่นนั้นโดยเฉพาะ
+---
 
-## ขอบเขตรุ่น 0.1.2
-
-รุ่นนี้เป็นแพ็กเกจเลือกบอร์ด คอมไพล์ และอัปโหลด พร้อมตัวอย่างพื้นฐานด้านล่าง
-ยังไม่ได้ทดสอบการอัปโหลดกับฮาร์ดแวร์ RB_Nexus จริง
-ยังไม่มีผังขามอเตอร์ เอ็นโค้ดเดอร์ ADC/PWM CAN I2C หรือ IMU
-จึงยังไม่มี API ควบคุมอุปกรณ์เหล่านั้น ดู [HARDWARE.md](HARDWARE.md)
-ตัวอย่าง BoardInfo ไม่ตั้งค่า GPIO ของอุปกรณ์ต่อพ่วง
+## ตัวอย่างการเรียกใช้งานโค้ด (`RB_Nexus.h`)
 
 ```cpp
 #include <RB_Nexus.h>
+
 void setup() {
-  Serial.begin(115200);
-  Serial.println(RBNexus::name);
+  Nexus.begin(115200);   // เริ่มต้นระบบบอร์ด Serial, I2C, SPI, LED, PCA9685
+  Nexus.encoderInit(1);  // เริ่มต้น Interrupt นับพัลส์เอนโค้ดเดอร์ช่อง 1
+
+  Nexus.setLED(true);    // เปิดไฟ LED สถานะ
+
+  // สั่งมอเตอร์ M4 หมุนเดินหน้า 80% (ความเร็ว -100 ถึง +100)
+  Nexus.motorDrive(4, 80);
+
+  // สั่งเซอร์โวช่อง 8 ไปที่มุม 90 องศา
+  Nexus.servoWrite(8, 90);
 }
-void loop() {}
+
+void loop() {
+  // อ่านค่าอนาล็อก 12-bit จาก MCP3208 ช่อง 0 (พอร์ต A1)
+  uint16_t raw_adc = Nexus.analogReadMCP(0);
+  float voltage = Nexus.analogReadVoltage(0);
+
+  // อ่านค่าพัลส์เอนโค้ดเดอร์และคำนวณ RPM
+  int32_t ticks = Nexus.getEncoderCount(1);
+  float rpm = Nexus.getEncoderRPM(1, 330);
+
+  Serial.printf("A1: %u (%.2fV) | ENC1: %ld (%0.1f RPM)\n", raw_adc, voltage, ticks, rpm);
+  delay(100);
+}
 ```
 
-## สร้างแพ็กเกจและเผยแพร่
+---
 
-ใช้ Python 3.9+ โดยไม่ต้องติดตั้ง Python library เพิ่ม:
+## แค็ตตาล็อกตัวอย่างโค้ด (Examples Directory)
 
-```sh
+ชุดตัวอย่างทั้งหมดกว่า 39 สเก็ตช์ ผ่านการทดสอบคอมไพล์ 100% บน `RB_Nexus:esp32:rb_nexus`:
+
+### 1. ระบบฮาร์ดแวร์พื้นฐาน & Subsystem Tests
+- **`RB_Nexus_SelfTest`**: สเก็ตช์ตรวจวัดตัวเองอัตโนมัติ (MCU, Flash, Wi-Fi, Bluetooth, PCA9685, MCP3208)
+- **`FullBoardTest`**: เมนูทดสอบรวมทุกระบบแบบ Interactive สำหรับ QC
+- **`MotorTest` & `MotorPID`**: ทดสอบมอเตอร์ M1..M4 พร้อมโหมด Diagnostic วิเคราะห์รายขา และระบบ Closed-loop PID
+- **`ServoTest`**: กวาดมุมเซอร์โวมอเตอร์ 8 แชนแนล (CH8..CH15)
+- **`EncoderTest`**: อ่านพัลส์เอนโค้ดเดอร์ 4 ชุดแบบเรียลไทม์
+- **`AnalogMCP3208`**: อ่านค่า ADC 12-bit ทั้ง 8 ช่อง (A1..A8)
+- **`DigitalIO` & `ButtonDebounce`**: ใช้งานพอร์ตดิจิทัล D4, D12, D14, D26, D27
+- **`CANLoopback` & `IMURaw`**: สื่อสารผ่าน CAN Bus (TWAI) และเซนเซอร์วัดความเฉื่อย 6 แกน
+- **`BluetoothSerialEcho` & `WiFiScan`**: การสื่อสารไร้สายของ ESP32
+
+### 2. หุ่นยนต์ micro-ROS (ROS 2 Humble / Jazzy)
+โฟลเดอร์ `examples/micro_ros/` บรรจุ 18 ตัวอย่างสำหรับการเชื่อมต่อกับ ROS 2:
+- `01_Publisher` — Heartbeat String Publisher
+- `02_Subscriber` / `03_LED_Subscriber` — รับคำสั่งควบคุมไฟ LED จาก ROS 2
+- `04_Button_Publisher` — ส่งสถานะปุ่มกด/ดิจิทัลอินพุต
+- `05_ADC_Publisher` / `06_MCP3208_AllChannels` — ส่งค่าอนาล็อก 12-bit
+- `07_Encoder_Publisher` — ส่งค่าตำแหน่งล้อจากเอนโค้ดเดอร์
+- `08_Motor_Subscriber` / `09_MotorEncoder` — รับคำสั่งความเร็วมอเตอร์พร้อมฟีดแบ็ก
+- `10_IMU_Publisher` — ส่งข้อมูล `sensor_msgs/Imu`
+- `11_Battery_Publisher` — ส่งระดับแรงดันแบตเตอรี่ `sensor_msgs/BatteryState`
+- `12_DigitalIO` — ควบคุม I/O ผ่าน ROS 2
+- `13_Servo_Subscriber` / `14_PWM_Subscriber` — ควบคุมเซอร์โวและ PWM
+- `15_AllSensors` / `16_RobotStatus` — ส่งข้อมูลเซนเซอร์รวมและสถานะหุ่นยนต์
+- `17_WiFiTransport` — micro-ROS UDP Transport ไร้สาย
+- `18_SerialTransport` — micro-ROS Serial UART Transport ผ่าน USB
+
+---
+
+## สำหรับนักพัฒนาและวิศวกร (Developer Workflow)
+
+### การสร้างแพ็กเกจ Boards Manager
+```bash
 python3 scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
 python3 scripts/verify_package.py
 ```
 
-สคริปต์ดาวน์โหลด core เวอร์ชันที่ล็อกไว้ ตรวจ SHA-256 และสร้างไฟล์ใน dist/:
-- RB_Nexus-esp32-0.1.2.zip สำหรับแนบ GitHub Release
-- package_RB_Nexus_index.json สำหรับวางที่ root ของ branch main
+### การรันชุดทดสอบคอมไพล์ทุกตัวอย่าง
+```bash
+python3 scripts/compile_examples.py
+```
 
-ต้องนำ JSON และ ZIP จากการ build รอบเดียวกันมาใช้คู่กัน ห้ามแก้ checksum เอง
-ZIP เป็นแบบไม่บีบอัดเพื่อให้ checksum เหมือนกันระหว่างเครื่องและ GitHub Actions
-
-Workflow **Build and release** ทำงานเมื่อ push main หรือสั่ง Run workflow:
-ตรวจ build → ติดตั้งแพ็กเกจผ่าน local HTTP ใน runner → compile ตัวอย่าง →
-สร้าง Release v0.1.2 และแนบ ZIP/JSON → อัปเดต index ที่ root ของ main
-หาก Release เวอร์ชันเดิมมีแล้ว workflow จะไม่เขียนทับไฟล์ ควรเพิ่ม VERSION
-และเวอร์ชันไลบรารีก่อนเผยแพร่รอบใหม่
-
-ถ้าขึ้น Connecting ค้าง ให้ตรวจสาย USB data และวงจร auto-reset;
-ถ้าบอร์ดไม่มี auto-reset อาจต้องกด BOOT ระหว่างเริ่มอัปโหลด
-หากไม่เห็น Port ให้ติดตั้งไดรเวอร์ที่ตรงกับชิป USB-UART จริงของบอร์ด
-
-## เครดิต
-
-พัฒนาบน [Arduino-ESP32 3.3.10](https://github.com/espressif/arduino-esp32/tree/3.3.10)
-ของ Espressif Systems ดู [NOTICE.md](NOTICE.md) และ [LICENSE.md](LICENSE.md)
-
-## Examples
-
-เลือกบอร์ด **RB_Nexus** แล้วเปิด **File > Examples > RB_Nexus**
-ทุกตัวอย่างใช้ Serial Monitor ที่ **115200 baud**
-
-| Example | การใช้งาน |
-| --- | --- |
-| Blink | ไฟติด/ดับทุก 500 ms โดยกำหนด GPIO ของ LED เอง |
-| BoardInfo | แสดงชื่อบอร์ด ชิป Flash และ CPU |
-| SerialEcho | พิมพ์ข้อความใน Serial Monitor แล้วรับข้อความเดิมกลับ |
-| WiFiScan | สแกน Wi-Fi 2.4 GHz โดยไม่ต้องใส่รหัสผ่าน |
-| DigitalInput | อ่าน HIGH/LOW จาก GPIO ที่กำหนด |
-| AnalogInput | อ่าน ADC1 ภายใน ESP32 ความละเอียด 12-bit |
-| PWMOutput | ปรับความสว่าง LED ภายนอกด้วย PWM 5 kHz |
-| I2CScanner | ค้นหา address อุปกรณ์บนบัส I2C |
-| CompileCheck | ตรวจการคอมไพล์แพ็กเกจสำหรับผู้พัฒนา |
-
-ตัวอย่าง Blink, DigitalInput, AnalogInput, PWMOutput และ I2CScanner เริ่มต้นด้วยขา `-1`
-เพื่อให้เปิดและคอมไพล์ได้ก่อน เมื่ออัปโหลดโดยยังไม่กำหนดขา จะแสดงข้อความทาง Serial
-และยังไม่เริ่มใช้งาน GPIO ให้แก้ค่า `#define RB_EXAMPLE_..._PIN -1` ด้านบนของ sketch
-เป็น GPIO ตามวงจรจริง ตรวจว่าขานั้นไม่ถูกใช้งานโดยวงจรอื่นอยู่แล้ว
-เลขช่อง Analog/PWM ของคอนเน็กเตอร์ไม่ใช่หมายเลข GPIO โดยอัตโนมัติ
-
-ยังไม่รวมตัวอย่างควบคุมมอเตอร์ เอ็นโค้ดเดอร์ หรือ Servo ของ RB_Nexus
-เพราะต้องทราบผังขาและรุ่นชิปขับก่อน ไม่ควรนำ PWMOutput ไปแทนคำสั่งมอเตอร์โดยตรง
-
-## อัปเดตจาก 0.1.0
-
-ใช้ลิงก์ Boards Manager เดิม ค้นหา **RB_Nexus** แล้วเลือกอัปเดตเป็น **0.1.2**
-ชื่อแพ็กเกจและชื่อบอร์ดแสดงเป็น **RB_Nexus** โดยไม่มีคำต่อท้าย
-
-## Blink: ไฟกระพริบ
-
-เปิด **File > Examples > RB_Nexus > Blink** แล้วเปลี่ยนค่า
-`#define RB_EXAMPLE_LED_PIN -1` เป็น GPIO ที่ต่อกับ LED จริง
-ไฟจะติด 500 ms และดับ 500 ms ปรับเวลาได้ที่ `BLINK_INTERVAL_MS`
-ถ้า LED ติดเมื่อ GPIO เป็น LOW ให้ตั้ง `LED_ACTIVE_LOW = true`
-ตัวอย่างนี้ใช้ LED ธรรมดา ไม่ใช่ LED RGB แบบ addressable
-
-เมื่อใช้ LED ภายนอก ต่อ GPIO ผ่านตัวต้านทาน 330 ohm เข้าขา Anode (+)
-และต่อ Cathode (-) ไป GND ใช้ขาที่ตรวจสอบแล้วว่าว่างและเป็น output ได้
-หากยังใช้ค่า -1 ตัวอย่างจะแสดงข้อความใน Serial Monitor ที่ 115200 baud
-และไม่สั่งงาน GPIO เพราะยังไม่มีผังขา LED บนบอร์ด RB_Nexus
+---
+*ลิขสิทธิ์ &copy; 2026 Redbrick Robotics*

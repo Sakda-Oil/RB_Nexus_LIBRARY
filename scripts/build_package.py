@@ -64,9 +64,10 @@ def build(archive, repository, output):
     entries['platform.txt'] = ((NOTICE + platform).encode(), 0o100644 << 16)
     pins = entries['variants/esp32/pins_arduino.h'][0]
     entries['variants/rb_nexus/pins_arduino.h'] = (
-        b'// RB_Nexus 0.1: generic ESP32 GPIO aliases only.\n'
-        b'// Peripheral connector pin mapping has not been supplied.\n'
-        b'// Modified 2026-09-09 from Espressif variants/esp32/pins_arduino.h.\n' + pins, 0o100644 << 16)
+        b'#ifndef LED_BUILTIN\n'
+        b'#define LED_BUILTIN 2\n'
+        b'#define BUILTIN_LED 2\n'
+        b'#endif\n' + pins, 0o100644 << 16)
     for path in sorted((ROOT / 'libraries').rglob('*')):
         if path.is_file():
             entries[path.relative_to(ROOT).as_posix()] = (path.read_bytes(), 0o100644 << 16)

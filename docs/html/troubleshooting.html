@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>การแก้ปัญหา (Troubleshooting) — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link active">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>คู่มือแก้ปัญหาทางเทคนิค (Troubleshooting Guide)</h1>
+      <p style="color: var(--text-muted);">วิเคราะห์อาการ สาเหตุ วิธีตรวจเช็ค และแนวทางแก้ไขสำหรับฮาร์ดแวร์และซอฟต์แวร์</p>
+    </header>
+
+    <h2>ตารางวิเคราะห์ปัญหา (Symptom & Solution Matrix)</h2>
+
+    <div class="card">
+      <h3>1. ปัญหาการอัปโหลดโค้ด: "A fatal error occurred: Failed to connect to ESP32"</h3>
+      <p><strong>สาเหตุ:</strong> คอมพิวเตอร์ไม่พบพอร์ต Serial หรือชิป ESP32 ไม่เข้าสู่โหมด Bootloader อัตโนมัติ</p>
+      <ul>
+        <li><strong>วิธีตรวจเช็ค:</strong> ตรวจดูใน Device Manager (Windows) หรือรันคำสั่ง <code>ls /dev/cu.usb*</code> (macOS/Linux) ว่ามีพอร์ต CH340 ปรากฏหรือไม่</li>
+        <li><strong>วิธีแก้ไข:</strong>
+          <ol>
+            <li>ติดตั้งไดรเวอร์ <strong>CH340/CH341 USB-to-UART</strong> สำหรับระบบปฏิบัติการของคุณ</li>
+            <li>เปลี่ยนสาย USB เป็นสาย Data คุณภาพสูง (หลีกเลี่ยงสายชาร์จโทรศัพท์แบบไม่มีสาย Data)</li>
+            <li>ขณะกด Upload ใน Arduino IDE เมื่อขึ้นข้อความ <code>Connecting......</code> ให้กดปุ่ม <strong>BOOT</strong> บนบอร์ดค้างไว้ 1-2 วินาทีแล้วปล่อย</li>
+          </ol>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>2. มอเตอร์ M1 และ M3 ไม่หมุน หรือ M2 หมุนทางเดียว</h3>
+      <p><strong>สาเหตุ:</strong> ในฮาร์ดแวร์บอร์ดรุ่น V0.1 มีความผิดพลาดเชิงวงจรที่ไดรเวอร์มอเตอร์</p>
+      <ul>
+        <li><strong>มอเตอร์ M4:</strong> ทำงานได้สมบูรณ์ทั้งสองทิศทาง</li>
+        <li><strong>มอเตอร์ M2:</strong> ลายวงจรสัญญาณ CH3 (IN2) ของ PCA9685 อาจขาดหรือไอซีขับเสียหาย ทำให้หมุนได้ทิศทางเดียว</li>
+        <li><strong>มอเตอร์ M1 และ M3:</strong> วงจรลอจิกหรือไฟเลี้ยงของชุดขับ H-Bridge ชุดแรกไม่ทำงาน</li>
+        <li><strong>วิธีแก้ไขเบื้องต้น:</strong> ใช้บอร์ดขับมอเตอร์ภายนอกต่อรับสัญญาณ PWM จากช่องเซอร์โว 8–15 หรือรอการแก้ไข PCB ในรุ่น <strong>Revision 0.2</strong></li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>3. I2C Error: "PCA9685 Not Found at 0x40"</h3>
+      <p><strong>สาเหตุ:</strong> ขาสัญญาณ SDA (GPIO 21) หรือ SCL (GPIO 22) ไม่มีตัวต้านทาน Pull-up หรือชิป PCA9685 ไม่มีไฟเลี้ยง 5V</p>
+      <ul>
+        <li><strong>วิธีตรวจเช็ค:</strong> อัปโหลดสเก็ตช์ <code>I2CScanner.ino</code> ดูว่าตรวจพบอุปกรณ์แอดเดรสใดบ้าง</li>
+        <li><strong>วิธีแก้ไข:</strong>
+          <ol>
+            <li>ตรวจสอบว่าได้ต่อไฟเลี้ยงแบตเตอรี่เข้าขั้ว DC Input แล้วหรือไม่ (ชิป PCA9685 ต้องการไฟเลี้ยง 5V จากวงจร Buck Converter)</li>
+            <li>ตรวจสอบตัวต้านทาน Pull-up 4.7k บนสาย SDA/SCL</li>
+          </ol>
+        </li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>4. ค่าอนาล็อก MCP3208 แกว่ง หรืออ่านได้ 0 / 4095 ตลอดเวลา</h3>
+      <p><strong>สาเหตุ:</strong> ขาสัญญาณ SPI Chip Select (GPIO 5) ไม่ต่อกับขา CS ของ MCP3208 หรือขาอนาล็อกไม่ได้ต่อวงจรทำให้ลอย (Floating)</p>
+      <ul>
+        <li><strong>วิธีตรวจเช็ค:</strong> นำสายจัมเปอร์ต่อพอร์ต A1 ลงกราวด์ (GND) ต้องอ่านได้ 0 และต่อเข้าไฟ 3.3V ต้องอ่านได้ประมาณ 4095</li>
+        <li><strong>วิธีแก้ไข:</strong> หากพอร์ตลอยให้ต่อตัวต้านทาน Pull-down 10k หรือต่อสัญญาณจากเซนเซอร์ที่มีเอาต์พุตแรงดันแน่นอน</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>5. micro-ROS Agent เชื่อมต่อไม่ติด (Agent Not Found)</h3>
+      <p><strong>สาเหตุ:</strong> Baud rate ไม่ตรงกัน พอร์ต Serial ถูกโปรแกรมอื่นครอบครอง หรือสิทธิ์พอร์ตของระบบปฏิบัติการ</p>
+      <ul>
+        <li><strong>วิธีตรวจเช็ค:</strong> ปิดโปรแกรม Serial Monitor ของ Arduino IDE ก่อนสั่งรัน Docker หรือ Agent</li>
+        <li><strong>วิธีแก้ไขบน Linux:</strong>
+          <div class="code-container">
+            <pre><code># ให้สิทธิ์อ่านเขียนพอร์ต USB
+sudo chmod 666 /dev/ttyUSB0
+# หรือเพิ่ม user เข้า dialout group
+sudo usermod -aG dialout $USER</code></pre>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

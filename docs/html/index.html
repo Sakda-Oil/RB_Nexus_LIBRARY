@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RB_Nexus — ESP32 Robotics Controller Documentation</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link active">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>RB_Nexus</h1>
+      <p style="font-size: 1.2rem; color: var(--text-muted);">
+        ESP32 Robotics Controller &amp; micro-ROS Embedded Platform &bull; Redbrick Robotics
+      </p>
+    </header>
+
+    <div class="alert alert-info">
+      <strong>ฮาร์ดแวร์เป้าหมาย (Hardware Target):</strong> โมดูล <strong>ESP32 NodeMCU ESP-WROOM-32</strong> Dual Core 240 MHz, 38-Pin, พร้อมชิปแปลง USB-UART CH340 และพอร์ต USB Type-C
+    </div>
+
+    <h2>ภาพรวมคุณสมบัติเด่น (Features)</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>🚗 ขับมอเตอร์ DC 4 ช่อง</h3>
+        <p>ควบคุมมอเตอร์ 4 ตัว (H-Bridge) ผ่านชิป PCA9685 I2C พร้อมระบบป้องกันการกระชากกลับทิศทาง (Reversal Dead-Time) และ Emergency Stop ทันที</p>
+      </div>
+      <div class="card">
+        <h3>🔄 Quadrature Encoder 4 ช่อง</h3>
+        <p>นับพัลส์ความเร็วสูงด้วย ESP32 GPIO Interrupt แบบ 2x Quadrature คำนวณ RPM แบบ Real-time และทิศทางการหมุน</p>
+      </div>
+      <div class="card">
+        <h3>📊 อนาล็อก 12-bit 8 ช่อง</h3>
+        <p>ชิป MCP3208 12-bit ADC อ่านค่าความละเอียด 0–4095 ผ่านบัส SPI ความเร็ว 1 MHz แม่นยำ แยกอิสระจาก internal ADC</p>
+      </div>
+      <div class="card">
+        <h3>🦾 เซอร์โว 8 ช่อง (50 Hz)</h3>
+        <p>ขับ RC Servos 8 ช่อง (ช่อง 8 ถึง 15) ผ่าน PWM ความถี่ 50 Hz จาก PCA9685 ปรับมุม 0°–180° ได้อย่างราบเรียบ</p>
+      </div>
+      <div class="card">
+        <h3>📡 การเชื่อมต่อ Wi-Fi &amp; Bluetooth</h3>
+        <p>Wi-Fi 2.4 GHz 802.11 b/g/n และ Bluetooth Classic 4.2 BR/EDR ในตัว พร้อมระบบ Auto-reconnect แบบ Non-blocking</p>
+      </div>
+      <div class="card">
+        <h3>🤖 micro-ROS &amp; ROS 2 Native</h3>
+        <p>เชื่อมต่อระบบหุ่นยนต์ ROS 2 (Humble &amp; Jazzy) ผ่าน Serial USB หรือ Wi-Fi UDP พร้อม State Machine และ Safety Watchdog</p>
+      </div>
+    </div>
+
+    <h2>สเปคบอร์ดสรุป (Summary Specifications)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>รายการ (Item)</th>
+          <th>รายละเอียด (Specification)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>ไมโครคอนโทรลเลอร์ (MCU)</strong></td>
+          <td>ESP32-WROOM-32, Xtensa Dual-Core 32-bit LX6, 240 MHz</td>
+        </tr>
+        <tr>
+          <td><strong>หน่วยความจำ Flash</strong></td>
+          <td>4 MB SPI Flash (DIO Mode, 40 MHz)</td>
+        </tr>
+        <tr>
+          <td><strong>แรงดันไฟเลี้ยงบอร์ด (Vin)</strong></td>
+          <td>DC 6–24 V (พร้อมวงจรลดแรงดัน Step-down จ่ายไฟเลี้ยงระบบ)</td>
+        </tr>
+        <tr>
+          <td><strong>ชิปเชื่อมต่อคอมพิวเตอร์ (USB-UART)</strong></td>
+          <td>WCH CH340 พร้อมวงจร Auto-reset สำหรับอัปโหลดโค้ดอัตโนมัติ</td>
+        </tr>
+        <tr>
+          <td><strong>ชิปควบคุม PWM (มอเตอร์ & เซอร์โว)</strong></td>
+          <td>NXP PCA9685 (16-Channel 12-bit I2C, Address 0x40)</td>
+        </tr>
+        <tr>
+          <td><strong>ชิปอ่านสัญญาณอนาล็อก (ADC)</strong></td>
+          <td>Microchip MCP3208 (8-Channel 12-bit SPI ADC)</td>
+        </tr>
+        <tr>
+          <td><strong>การรองรับ ROS 2</strong></td>
+          <td>micro-ROS Humble (Ubuntu 22.04) และ Jazzy (Ubuntu 24.04)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>เริ่มต้นใช้งานอย่างรวดเร็ว (Quick Start)</h2>
+    <ol>
+      <li>ติดตั้งแพ็กเกจผ่าน Boards Manager: เพิ่ม URL ใน Arduino IDE แล้วค้นหา <code>RB_Nexus</code></li>
+      <li>เลือกบอร์ด: <strong>Tools &gt; Board &gt; RB_Nexus &gt; RB_Nexus</strong></li>
+      <li>เปิดตัวอย่างทดสอบรวม: <strong>File &gt; Examples &gt; RB_Nexus &gt; FullBoardTest</strong></li>
+      <li>กด Upload และเปิด Serial Monitor ที่ <strong>115200 baud</strong> เพื่อเริ่มทดสอบ</li>
+    </ol>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

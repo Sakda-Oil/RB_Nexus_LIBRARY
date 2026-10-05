@@ -1,0 +1,45 @@
+name: CI Verification
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Build and verify package archive
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python3 scripts/build_package.py --repository "${REPOSITORY:-Sakda-Oil/RB_Nexus_LIBRARY}"
+          python3 scripts/verify_package.py
+          python3 scripts/local_test_index.py
+
+      - name: Test installation and compile all examples
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory dist > /tmp/rb-nexus-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          for attempt in 1 2 3 4 5; do
+            if curl --fail --silent http://127.0.0.1:8765/package_RB_Nexus_test_index.json > /dev/null; then break; fi
+            sleep 1
+          done
+          index=http://127.0.0.1:8765/package_RB_Nexus_test_index.json
+          arduino-cli core update-index --additional-urls "$index"
+          version=$(cat VERSION)
+          arduino-cli core install "RB_Nexus:esp32@$version" --additional-urls "$index"
+          python3 scripts/compile_examples.py

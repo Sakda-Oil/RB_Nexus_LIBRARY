@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>micro-ROS บน ESP32 — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link active">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>micro-ROS บนบอร์ด RB_Nexus (ESP32)</h1>
+      <p style="color: var(--text-muted);">สถาปัตยกรรมระบบ micro-ROS, การจัดการความเข้ากันได้ของคอมไพเลอร์, กลไกความปลอดภัย และ Transport Layer</p>
+    </header>
+
+    <h2>1. สถาปัตยกรรมระบบ (Architecture Overview)</h2>
+    <p>micro-ROS ช่วยให้บอร์ด ESP32 บนหุ่นยนต์ RB_Nexus สามารถทำหน้าที่เป็น ROS 2 Node ตัวเต็ม โดยสื่อสารแลกเปลี่ยน Topic, Service และ Parameter กับระบบประมวลผลหลัก (เช่น ROS 2 Humble บน Raspberry Pi หรือ PC) ผ่าน <strong>micro-ROS Agent</strong></p>
+
+    <div class="card">
+      <h3>การทำงานแบบ State Machine</h3>
+      <p>ไลบรารี <code>RB_Nexus_MicroROS.h</code> ควบคุมการเชื่อมต่อแบบ FSM ป้องกันหุ่นยนต์ทำงานผิดปกติเมื่อการเชื่อมต่อหลุด:</p>
+      <ul>
+        <li><code>WAITING_AGENT</code>: ESP32 ตรวจสอบการตอบสนองจาก micro-ROS Agent</li>
+        <li><code>AGENT_AVAILABLE</code>: พบคอมพิวเตอร์เอเจนต์ กำลังสร้าง Node, Publishers และ Subscribers</li>
+        <li><code>CONNECTED</code>: สื่อสารข้อมูลสมบูรณ์ พร้อมรับส่งคำสั่งความเร็วและเซนเซอร์</li>
+        <li><code>DISCONNECTED</code>: สัญญาณขาดหาย ระบบสั่ง E-Stop หยุดมอเตอร์ทั้งหมดทันที และพยายามเชื่อมต่อใหม่แบบ Exponential Backoff</li>
+      </ul>
+    </div>
+
+    <h2>2. ตารางความเข้ากันได้ของคอมไพเลอร์ (Compatibility Matrix)</h2>
+    <div class="alert alert-warn">
+      <strong>ข้อควรระวังสำคัญทางเทคนิค:</strong> ESP32 Arduino Core เวอร์ชัน 3.x ใช้ <strong>ESP-IDF v5.1</strong> ซึ่งไลบรารีภายนอก <code>micro_ros_arduino</code> แบบ Precompiled Binary ในปัจจุบันถูกคอมไพล์มาจาก ESP-IDF v4.4
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Arduino-ESP32 Core</th>
+          <th>ESP-IDF Base</th>
+          <th>สถานะ micro_ros_arduino</th>
+          <th>แนวทางการใช้งานใน RB_Nexus</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>v2.0.17 (LTS)</strong></td>
+          <td>ESP-IDF v4.4</td>
+          <td><span class="badge badge-pass">Fully Compatible</span></td>
+          <td>คอมไพล์ Native Binaries และใช้งานร่วมกับไลบรารี micro_ros_arduino ได้ทันที 100%</td>
+        </tr>
+        <tr>
+          <td><strong>v3.x (เช่น 3.3.10)</strong></td>
+          <td>ESP-IDF v5.1</td>
+          <td><span class="badge badge-warn">ABI Mismatch</span></td>
+          <td>ใช้ <code>RB_Nexus_MicroROS.h</code> Fallback Stubs โค้ดคอมไพล์ผ่านทุกบอร์ด หรือใช้ Docker ESP-IDF v5 build</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>3. นวัตกรรม Fallback Stubs สากลของ RB_Nexus</h2>
+    <p>เพื่อให้ตัวอย่างโค้ดและไลบรารีสามารถคอมไพล์และทดสอบบนคอมพิวเตอร์ของนักพัฒนาได้ทุกคน แม้จะยังไม่ได้ติดตั้งไลบรารี micro-ROS แยกต่างหาก ไฟล์ <code>RB_Nexus_MicroROS.h</code> จึงมาพร้อมระบบตรวจสอบอัตโนมัติ:</p>
+    <div class="code-container">
+      <pre><code>#if __has_include(&lt;micro_ros_arduino.h&gt;)
+  // ใช้งานชุดคำสั่ง Native micro-ROS จริง
+  #include &lt;micro_ros_arduino.h&gt;
+  #include &lt;rcl/rcl.h&gt;
+  #include &lt;rclc/rclc.h&gt;
+#else
+  // ใช้งาน Lightweight Emulation Stubs สำหรับการคอมไพล์และทดสอบ
+  #define RCUTILS_RET_OK 0
+  ...
+#endif</code></pre>
+    </div>
+
+    <h2>4. วอทช์ด็อกเพื่อความปลอดภัย (Safety Watchdog)</h2>
+    <p>ในการควบคุมหุ่นยนต์เคลื่อนที่ (Mobile Robot) หากตัวส่งสัญญาณ ROS 2 หลุดหรือโปรแกรมคอมพิวเตอร์แครช ล้ออาจหมุนค้างและชนสิ่งกีดขวาง RB_Nexus มีวงจรความปลอดภัยฝังตัวในระดับไมโครคอนโทรลเลอร์:</p>
+    <ul>
+      <li>เมื่อได้รับข้อความ <code>/cmd_vel</code> ตัวจับเวลาจะถูกรีเซ็ต (Heartbeat Feed)</li>
+      <li>หากไม่มีคำสั่งใหม่เข้ามาเกินกว่า <strong>1000 มิลลิวินาที</strong> ฟังก์ชัน <code>motorStopAll()</code> จะถูกเรียกโดยอัตโนมัติ</li>
+      <li>ไฟสถานะ LED บนขา GPIO 2 จะกะพริบเตือนสถานะขาดการเชื่อมต่อ</li>
+    </ul>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link active">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>API Reference</h1>
+      <p style="color: var(--text-muted);">คู่มือฟังก์ชัน คลาส และคำสั่งทั้งหมดของไลบรารี RB_Nexus สำหรับ ESP32</p>
+    </header>
+
+    <div class="alert alert-info">
+      <strong>Header File:</strong> เพียงแค่ใส่ <code>#include &lt;RB_Nexus.h&gt;</code> ในโปรเจกต์ของคุณ ระบบจะทำการ include คอนฟิกขา คลาสฮาร์ดแวร์ และสร้างอินสแตนซ์สากล <code>Nexus</code> ให้ใช้งานได้ทันที
+    </div>
+
+    <h2>1. ฟังก์ชันระบบหลัก (System Core)</h2>
+    <div class="card">
+      <h3>Nexus.begin()</h3>
+      <p>เริ่มต้นระบบบัส I2C, SPI, ชิป PCA9685, ตั้งค่าสถานะเริ่มต้นของมอเตอร์และขา I/O ทั้งหมด</p>
+      <div class="code-container">
+        <pre><code>bool begin(unsigned long baud = 115200);</code></pre>
+      </div>
+      <p><strong>พารามิเตอร์:</strong> <code>baud</code> (ค่าเริ่มต้น 115200) - ความเร็ว Serial Monitor</p>
+      <p><strong>คืนค่า:</strong> <code>true</code> หากพบชิป PCA9685 บนบัส I2C ที่แอดเดรส 0x40 สำเร็จ</p>
+    </div>
+
+    <div class="card">
+      <h3>Nexus.printBoardInfo()</h3>
+      <p>พิมพ์ข้อมูลสรุปฮาร์ดแวร์ เวอร์ชันไลบรารี สเปคไมโครคอนโทรลเลอร์ ESP32 และผังขาไปยัง Serial Monitor</p>
+      <div class="code-container">
+        <pre><code>void printBoardInfo();</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Nexus.watchdogFeed() & enableWatchdog()</h3>
+      <p>เปิดใช้งานและรีเซ็ตซอฟต์แวร์วอทช์ด็อกเพื่อความปลอดภัย เมื่อหุ่นยนต์ขาดการสื่อสาร มอเตอร์ทั้งหมดจะหยุดหมุนอัตโนมัติ (E-Stop)</p>
+      <div class="code-container">
+        <pre><code>void enableWatchdog(uint32_t timeout_ms = 1000);
+void watchdogFeed();
+bool isWatchdogTriggered();</code></pre>
+      </div>
+    </div>
+
+    <h2>2. Status LED & Digital I/O</h2>
+    <div class="card">
+      <h3>Nexus.setLED() & toggleLED()</h3>
+      <p>ควบคุมไฟสถานะบนบอร์ด (ต่อกับ GPIO 2, Active HIGH)</p>
+      <div class="code-container">
+        <pre><code>void setLED(bool state);
+void toggleLED();
+void blinkLED(uint16_t on_ms, uint16_t off_ms);</code></pre>
+      </div>
+    </div>
+
+    <h2>3. ควบคุมดีซีมอเตอร์ (DC Motor Subsystem)</h2>
+    <p>ควบคุมมอเตอร์ 4 ช่อง (M1..M4) ขับผ่านชิปขยายขา PWM PCA9685 พร้อมฟังก์ชันคำนวณ Reversal Dead-time ป้องกัน Shoot-through</p>
+    <div class="card">
+      <h3>Nexus.motorDrive()</h3>
+      <div class="code-container">
+        <pre><code>void motorDrive(uint8_t channel, int16_t speed);</code></pre>
+      </div>
+      <p><strong>พารามิเตอร์:</strong></p>
+      <ul>
+        <li><code>channel</code>: ช่องมอเตอร์ 1 ถึง 4 (ตรงกับ M1, M2, M3, M4)</li>
+        <li><code>speed</code>: ความเร็วและทิศทาง ตั้งแต่ <code>-100</code> (ถอยหลังเต็มที่) ถึง <code>+100</code> (เดินหน้าเต็มที่), <code>0</code> คือหยุดหมุน (Coast)</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Nexus.motorStop() & motorStopAll()</h3>
+      <div class="code-container">
+        <pre><code>void motorStop(uint8_t channel);
+void motorStopAll(); // สั่งตัดกำลังมอเตอร์ทั้งหมดทันที (E-Stop)</code></pre>
+      </div>
+    </div>
+
+    <h2>4. ควบคุมเซอร์โวมอเตอร์ (Servo Subsystem)</h2>
+    <p>ควบคุม RC Servo ช่อง 8 ถึง 15 ความถี่ 50 Hz (20 ms period) ความละเอียด 12-bit จาก PCA9685</p>
+    <div class="card">
+      <h3>Nexus.servoWrite() & servoWriteMicroseconds()</h3>
+      <div class="code-container">
+        <pre><code>void servoWrite(uint8_t channel, uint8_t angle);
+void servoWriteMicroseconds(uint8_t channel, uint16_t us);</code></pre>
+      </div>
+      <p><strong>พารามิเตอร์:</strong></p>
+      <ul>
+        <li><code>channel</code>: ช่องเซอร์โว 8 ถึง 15</li>
+        <li><code>angle</code>: มุมองศา 0 ถึง 180</li>
+        <li><code>us</code>: ความกว้างพัลส์ไมโครวินาที (ช่วงมาตรฐาน 500 ถึง 2500 us)</li>
+      </ul>
+    </div>
+
+    <h2>5. อินเตอร์รัปต์เอนโค้ดเดอร์ (Quadrature Encoders)</h2>
+    <p>อ่านสัญญาณพัลส์ Quadrature (Phase A, B) 4 ช่องสัญญาณ ด้วยฮาร์ดแวร์ GPIO Interrupt ของ ESP32</p>
+    <div class="card">
+      <h3>Nexus.encoderInit() & getEncoderCount()</h3>
+      <div class="code-container">
+        <pre><code>void encoderInit(uint8_t channel);
+int32_t getEncoderCount(uint8_t channel);
+void resetEncoderCount(uint8_t channel);
+float getEncoderRPM(uint8_t channel, uint16_t ppr = 330);</code></pre>
+      </div>
+      <p><strong>แชนแนล:</strong> 1 (GPIO 36, 39), 2 (GPIO 34, 35), 3 (GPIO 32, 33), 4 (GPIO 25, 13)</p>
+    </div>
+
+    <h2>6. อนาล็อกภายนอก 12-bit (MCP3208 SPI ADC)</h2>
+    <div class="card">
+      <h3>Nexus.analogReadMCP()</h3>
+      <div class="code-container">
+        <pre><code>uint16_t analogReadMCP(uint8_t channel);
+float analogReadVoltage(uint8_t channel, float vref = 3.3f);</code></pre>
+      </div>
+      <p><strong>พารามิเตอร์:</strong> <code>channel</code>: ช่องอนาล็อก 0 ถึง 7 (ตรงกับพอร์ต A1 ถึง A8)</p>
+      <p><strong>คืนค่า:</strong> ค่าดิจิทัล 12-bit (0 ถึง 4095) หรือแรงดันไฟฟ้า (0.00V ถึง 3.30V)</p>
+    </div>
+
+    <h2>7. ระบบควบคุมความเร็ว PID (Speed Control)</h2>
+    <div class="card">
+      <h3>RB_Nexus_PID</h3>
+      <div class="code-container">
+        <pre><code>class RB_Nexus_PID {
+public:
+  RB_Nexus_PID(float kp, float ki, float kd);
+  void setTunings(float kp, float ki, float kd);
+  void setTargetRPM(float target);
+  int16_t compute(float current_rpm);
+  void reset();
+};</code></pre>
+      </div>
+    </div>
+
+    <h2>8. micro-ROS Subsystem</h2>
+    <p>อินเทอร์เฟซสื่อสารระดับสูงระหว่าง RB_Nexus กับ ROS 2 สถาปัตยกรรม State-Machine ปลอดภัย</p>
+    <div class="card">
+      <h3>RB_Nexus_MicroROS</h3>
+      <div class="code-container">
+        <pre><code>#include &lt;RB_Nexus_MicroROS.h&gt;
+
+RB_Nexus_MicroROS uros;
+uros.begin(115200);
+uros.spinSome();
+uros.isAgentConnected();</code></pre>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

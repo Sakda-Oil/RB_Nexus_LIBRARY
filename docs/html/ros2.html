@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROS 2 Agent & Topics — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link active">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>การเชื่อมต่อ ROS 2 Agent & Topics</h1>
+      <p style="color: var(--text-muted);">วิธีรัน micro-ROS Agent บน Linux (Ubuntu 22.04 / 24.04), การใช้ Docker และคำสั่งทดสอบรับส่ง Topic</p>
+    </header>
+
+    <h2>1. การติดตั้งและรัน micro-ROS Agent</h2>
+    <p>micro-ROS Agent ทำหน้าที่เป็นตัวแปลงสัญญาณระหว่าง XRCE-DDS ของ ESP32 ไปยังเครือข่าย ROS 2 DDS</p>
+
+    <h3>วิธีที่ 1: รันผ่าน Docker (แนะนำ - ง่ายและเร็วที่สุด)</h3>
+    <div class="card">
+      <p>สำหรับ ROS 2 Humble (Ubuntu 22.04) ผ่านพอร์ต Serial USB:</p>
+      <div class="code-container">
+        <pre><code>docker run -it --rm -v /dev:/dev --privileged --net=host microros/micro-ros-agent:humble serial --dev /dev/ttyUSB0 -b 115200</code></pre>
+      </div>
+      <p>สำหรับสื่อสารผ่าน Wi-Fi UDP (พอร์ต 8888):</p>
+      <div class="code-container">
+        <pre><code>docker run -it --rm --net=host microros/micro-ros-agent:humble udp4 --port 8888</code></pre>
+      </div>
+    </div>
+
+    <h3>วิธีที่ 2: สร้างและคอมไพล์จาก Colcon Workspace</h3>
+    <div class="card">
+      <div class="code-container">
+        <pre><code># ติดตั้ง Dependencies
+source /opt/ros/humble/setup.bash
+mkdir -p ~/microros_ws/src
+cd ~/microros_ws/src
+git clone -b humble https://github.com/micro-ROS/micro_ros_setup.git
+cd ~/microros_ws
+rosdep update && rosdep install --from-paths src --ignore-src -y
+colcon build
+source install/local_setup.bash
+
+# สร้าง Agent
+ros2 run micro_ros_setup create_agent_ws.sh
+ros2 run micro_ros_setup build_agent.sh
+source install/local_setup.bash
+
+# รัน Agent เชื่อมต่อบอร์ด RB_Nexus
+ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200</code></pre>
+      </div>
+    </div>
+
+    <h2>2. คำสั่งตรวจสอบในระบบ ROS 2 (Verification Commands)</h2>
+    <p>เปิด Terminal ใหม่บนเครื่องคอมพิวเตอร์ที่รัน ROS 2:</p>
+
+    <div class="card">
+      <h3>ตรวจดูโหนดและหัวข้อ (Nodes & Topics)</h3>
+      <div class="code-container">
+        <pre><code># รายชื่อ Nodes
+ros2 node list
+# ผลลัพธ์ที่ควรพบ: /rb_nexus_node
+
+# รายชื่อ Topics
+ros2 topic list
+# ผลลัพธ์:
+# /rb_nexus/chatter
+# /rb_nexus/led_cmd
+# /cmd_vel
+# /joint_states
+# /odom
+# /battery_state</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>ทดสอบส่งคำสั่งขับเคลื่อนหุ่นยนต์ (/cmd_vel)</h3>
+      <p>ส่งคำสั่งให้หุ่นยนต์วิ่งตรงด้วยความเร็ว 0.2 เมตร/วินาที:</p>
+      <div class="code-container">
+        <pre><code>ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.2, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}"</code></pre>
+      </div>
+      <p>ควบคุมผ่านคีย์บอร์ดด้วยแพ็กเกจ Teleop Twist Keyboard:</p>
+      <div class="code-container">
+        <pre><code>ros2 run teleop_twist_keyboard teleop_twist_keyboard</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>อ่านค่าข้อมูลเซนเซอร์ (Echo Topics)</h3>
+      <div class="code-container">
+        <pre><code># อ่านค่าพัลส์เอนโค้ดเดอร์
+ros2 topic echo /joint_states
+
+# ตรวจวัดแรงดันไฟแบตเตอรี่
+ros2 topic echo /battery_state</code></pre>
+      </div>
+    </div>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>

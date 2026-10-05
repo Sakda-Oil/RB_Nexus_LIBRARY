@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สเปคฮาร์ดแวร์ (Hardware Architecture) — RB_Nexus</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
+</head>
+<body>
+  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link active">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+  <main class="main-content">
+    <header>
+      <h1>สถาปัตยกรรมฮาร์ดแวร์ (Hardware Architecture)</h1>
+      <p style="color: var(--text-muted);">รายละเอียดทางวิศวกรรมของบอร์ด RB Nexus V0.1 และชิปควบคุมต่อพ่วง</p>
+    </header>
+
+    <h2>1. ไมโครคอนโทรลเลอร์หลัก: ESP32-WROOM-32</h2>
+    <ul>
+      <li><strong>CPU:</strong> Xtensa Dual-Core 32-bit LX6 Microprocessor ทำงานที่ความเร็ว 240 MHz (คำนวณได้ถึง 600 DMIPS)</li>
+      <li><strong>Memory:</strong> 520 KB SRAM ภายในตัวชิป</li>
+      <li><strong>Flash:</strong> 4 MB SPI Flash (ต่อผ่านขาสงวนภายใน GPIO 6 ถึง 11)</li>
+      <li><strong>Wireless:</strong> Wi-Fi 802.11 b/g/n (2.4 GHz) ความเร็วสูงสุด 150 Mbps และ Bluetooth v4.2 BR/EDR และ BLE specification</li>
+    </ul>
+
+    <h2>2. แหล่งจ่ายไฟ (Power Supply Subsystem)</h2>
+    <div class="card">
+      <h3>DC Input 6–24V</h3>
+      <p>บอร์ดออกแบบให้รับไฟเลี้ยงจากแบตเตอรี่ LiPo (2S–6S) หรือ Power Supply 12V/24V ผ่านคอนเน็กเตอร์ขันสกรู (Screw Terminal)</p>
+      <ul>
+        <li><strong>Step-Down Buck Converter (5V):</strong> ลดแรงดันไฟเข้าเป็น 5V สำหรับจ่ายให้ชิป PCA9685, เซอร์โวมอเตอร์, และเรกูเลเตอร์ 3.3V</li>
+        <li><strong>LDO Regulator (3.3V):</strong> แปลงไฟ 5V เป็น 3.3V จ่ายให้ ESP32, ชิป MCP3208, และวงจร Logic บนบอร์ด</li>
+      </ul>
+    </div>
+
+    <h2>3. ชิปควบคุม PWM: NXP PCA9685</h2>
+    <p>ชิป I2C 16-Channel 12-bit PWM Controller (Address <code>0x40</code> บนขา SDA=21, SCL=22) จัดสรรช่องสัญญาณดังนี้:</p>
+    <table>
+      <thead>
+        <tr>
+          <th>ช่อง PWM</th>
+          <th>อุปกรณ์เป้าหมาย</th>
+          <th>การต่อใช้งาน</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>CH0, CH1</strong></td>
+          <td>DC Motor 1 (M1)</td>
+          <td>IN1 / IN2 ของวงจรขับ H-Bridge มอเตอร์ตัวที่ 1</td>
+        </tr>
+        <tr>
+          <td><strong>CH2, CH3</strong></td>
+          <td>DC Motor 2 (M2)</td>
+          <td>IN1 / IN2 ของวงจรขับ H-Bridge มอเตอร์ตัวที่ 2</td>
+        </tr>
+        <tr>
+          <td><strong>CH4, CH5</strong></td>
+          <td>DC Motor 3 (M3)</td>
+          <td>IN1 / IN2 ของวงจรขับ H-Bridge มอเตอร์ตัวที่ 3</td>
+        </tr>
+        <tr>
+          <td><strong>CH6, CH7</strong></td>
+          <td>DC Motor 4 (M4)</td>
+          <td>IN1 / IN2 ของวงจรขับ H-Bridge มอเตอร์ตัวที่ 4</td>
+        </tr>
+        <tr>
+          <td><strong>CH8 – CH15</strong></td>
+          <td>Servo Outputs 8–15</td>
+          <td>เอาต์พุตพัลส์มาตรฐานความถี่ 50 Hz (20 ms period) ขับ RC Servos 8 ช่อง</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>4. ชิปอ่านอนาล็อกภายนอก: Microchip MCP3208</h2>
+    <p>ชิป 8-Channel 12-bit Analog-to-Digital Converter สื่อสารผ่านบัส SPI (VSPI):</p>
+    <ul>
+      <li><strong>MOSI (DIN):</strong> GPIO 23</li>
+      <li><strong>MISO (DOUT):</strong> GPIO 19</li>
+      <li><strong>CLK (SCK):</strong> GPIO 18</li>
+      <li><strong>CS (/SHDN):</strong> GPIO 5</li>
+      <li><strong>ความละเอียด:</strong> 12-bit (ค่าดิบ 0 ถึง 4095) แรงดันอ้างอิง VREF = 3.3V</li>
+    </ul>
+
+    <footer>
+      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
+    </footer>
+  </main>
+</body>
+</html>
