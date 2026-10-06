@@ -1,136 +1,75 @@
-# RB_Nexus
+# RB_Nexus 0.2.1
 
-แพ็กเกจบอร์ดและไลบรารี RB_Nexus สำหรับ Arduino IDE / Boards Manager  
-สำหรับบอร์ดหุ่นยนต์ **RB Nexus V0.1** (ESP32-WROOM-32 Dual Core 240MHz, 4MB Flash, USB-UART CH340, USB-C)  
-พัฒนาบนสถาปัตยกรรม **Arduino-ESP32 Core 3.3.10 (ESP-IDF 5.1)** พร้อมระบบควบคุมหุ่นยนต์เต็มรูปแบบและรองรับ **ROS 2 Humble / Jazzy (micro-ROS)**
+Arduino board package และไลบรารีสำหรับ RB Nexus V0.1 (ESP32-WROOM-32) บน Arduino-ESP32 core 3.3.10
 
----
+รองรับ PCA9685 มอเตอร์/Servo, MCP3208, Encoder, **MPU6050, MPU9250 + AK8963 และ GY-BNO085 ผ่าน I2C** พร้อมตัวอย่าง micro-ROS ที่ใช้ไลบรารีจริง
 
-## เอกสารประกอบทางเทคนิค (Documentation & Interactive Portals)
+## ติดตั้ง
 
-- 📖 **[Interactive HTML Documentation](docs/html/index.html)** — เว็บไซต์คู่มือเชิงเทคนิคฉบับสมบูรณ์ (14 หน้า)
-- 📌 **[Interactive Pinout Table](docs/pin_mapping.html)** — ตารางผังขาแบบฟิลเตอร์และค้นหาได้
-- ✅ **[Hardware QC Test Checklist](docs/hardware_test_checklist.html)** — เช็กลิสต์ตรวจรับบอร์ดหน้างานสำหรับฝ่ายผลิตและ QC
-- 📊 **[Validation Report (V0.1)](docs/VALIDATION_REPORT.md)** — รายงานการทดสอบทางวิศวกรรม ตอบครบทั้ง 5 ข้อกำหนดหลัก
-
----
-
-## การติดตั้งใน Arduino IDE (Installation)
-
-ใส่ลิงก์นี้ในช่อง **Additional Boards Manager URLs** ในการตั้งค่า (Settings/Preferences) ของ Arduino IDE:
+เพิ่ม URL ใน Arduino IDE → Preferences → Additional Boards Manager URLs:
 
 ```text
 https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nexus_index.json
 ```
 
-1. เปิด Arduino IDE (เวอร์ชัน 2.x ขึ้นไป)
-2. ไปที่ **Preferences** (หรือ Settings)
-3. วาง URL ด้านบนลงในช่อง **Additional Boards Manager URLs**
-4. เปิดเมนู **Boards Manager** (ไอคอนบอร์ดทางซ้ายมือ)
-5. พิมพ์ค้นหา `RB_Nexus` แล้วกด **Install** เวอร์ชันล่าสุด
-6. ไปที่เมนู **Tools > Board > RB_Nexus > RB_Nexus**
-7. เลือกพอร์ต Serial USB (**Tools > Port**)
-8. เปิดตัวอย่าง **File > Examples > RB_Nexus > FullBoardTest** หรือ **RB_Nexus_SelfTest** แล้วกด Upload
+ติดตั้งบอร์ด RB_Nexus จาก Boards Manager แล้วติดตั้ง **MPU9250 by hideakitai 0.4.8** และ **Adafruit BNO08x 1.2.7** พร้อม dependencies จาก Library Manager (ต้องติดตั้งทั้งคู่)
 
----
+## อ่าน IMU
 
-## ผังขาและฮาร์ดแวร์ RB Nexus V0.1
-
-| ส่วนการทำงาน | ช่อง / ขาที่เชื่อมต่อ | สถานะ Hardware จริง | รายละเอียด |
-| :--- | :--- | :---: | :--- |
-| **Status LED** | GPIO 2 | ✅ **PASS** | ไฟสถานะ LED บนบอร์ด (Active HIGH) |
-| **Digital I/O** | GPIO 4, 12, 14, 26, 27 | ✅ **PASS** | ดิจิทัล I/O รองรับทั้ง `INPUT_PULLUP` และ `OUTPUT` |
-| **Quadrature Encoders** | ENC1: GPIO 36, 39<br>ENC2: GPIO 34, 35<br>ENC3: GPIO 32, 33<br>ENC4: GPIO 25, 13 | ✅ **PASS** | นับพัลส์ 4 ล้ออิสระด้วย Hardware Interrupt ของ ESP32 |
-| **Servo Outputs (8 ช่อง)** | PCA9685 I2C (0x40): CH8–CH15 | ✅ **PASS** | เอาต์พุตพัลส์มาตรฐาน 50 Hz สำหรับ RC Servos มุม 0–180° |
-| **DC Motor 4 (M4)** | PCA9685 I2C (0x40): CH6, CH7 | ✅ **PASS** | ขับหมุนเดินหน้า ถอยหลัง เบรก และหยุดได้สมบูรณ์ |
-| **DC Motor 2 (M2)** | PCA9685 I2C (0x40): CH2, CH3 | ⚠️ **PARTIAL** | หมุนได้ทิศทางเดียว (ลายวงจร CH3 ขาดบน V0.1) |
-| **DC Motor 1, 3 (M1, M3)**| PCA9685 I2C (0x40): CH0,1 / CH4,5 | ❌ **FAIL** | มอเตอร์ไม่หมุน (ลายวงจรหรือเกต H-Bridge ไม่ตอบสนอง) |
-| **MCP3208 12-bit ADC** | SPI (MOSI: 23, MISO: 19, SCK: 18, CS: 5) | ⚠️ **PENDING** | การสื่อสาร SPI ปกติ อยู่ระหว่างรอ Schematic เทียบสเกลแรงดัน |
-| **I2C Bus** | SDA: GPIO 21, SCL: GPIO 22 | ✅ **PASS** | ตรวจพบชิป PCA9685 ที่แอดเดรส 0x40 |
-| **CAN Bus (TWAI)** | RB_PIN_UNDEFINED (-1) | ⚠️ **UNVERIFIED** | ซอฟต์แวร์พร้อม รอชิป CAN Transceiver บน PCB |
-| **IMU (6-DOF)** | I2C Auto-probe (0x68, 0x69) | ⚠️ **UNVERIFIED** | ซอฟต์แวร์พร้อม Auto-probe ป้องกันการแฮงก์ |
-
----
-
-## ตัวอย่างการเรียกใช้งานโค้ด (`RB_Nexus.h`)
+SDA=GPIO21, SCL=GPIO22, GND ร่วม; สัญญาณ I2C 3.3 V ใช้ไฟเลี้ยงตามสเปกโมดูลจริง
 
 ```cpp
 #include <RB_Nexus.h>
 
 void setup() {
-  Nexus.begin(115200);   // เริ่มต้นระบบบอร์ด Serial, I2C, SPI, LED, PCA9685
-  Nexus.encoderInit(1);  // เริ่มต้น Interrupt นับพัลส์เอนโค้ดเดอร์ช่อง 1
-
-  Nexus.setLED(true);    // เปิดไฟ LED สถานะ
-
-  // สั่งมอเตอร์ M4 หมุนเดินหน้า 80% (ความเร็ว -100 ถึง +100)
-  Nexus.motorDrive(4, 80);
-
-  // สั่งเซอร์โวช่อง 8 ไปที่มุม 90 องศา
-  Nexus.servoWrite(8, 90);
+  Serial.begin(115200);
+  RB.begin();
+  // เลือก Auto, MPU6050, MPU9250 หรือ BNO085 (หนึ่งตัวทำงานในแต่ละครั้ง)
+  if (!RB.imuBegin(RBIMUType::Auto)) Serial.println("IMU not found");
 }
-
 void loop() {
-  // อ่านค่าอนาล็อก 12-bit จาก MCP3208 ช่อง 0 (พอร์ต A1)
-  uint16_t raw_adc = Nexus.analogReadMCP(0);
-  float voltage = Nexus.analogReadVoltage(0);
-
-  // อ่านค่าพัลส์เอนโค้ดเดอร์และคำนวณ RPM
-  int32_t ticks = Nexus.getEncoderCount(1);
-  float rpm = Nexus.getEncoderRPM(1, 330);
-
-  Serial.printf("A1: %u (%.2fV) | ENC1: %ld (%0.1f RPM)\n", raw_adc, voltage, ticks, rpm);
-  delay(100);
+  RB.update();
+  static uint32_t last = 0;
+  if (millis() - last >= 100) {
+    last = millis();
+    if (RB.imuDataFresh()) {
+      Serial.printf("a[m/s^2] %.3f %.3f %.3f  gyro[rad/s] %.3f %.3f %.3f\n",
+        RB.accelX(), RB.accelY(), RB.accelZ(), RB.gyroX(), RB.gyroY(), RB.gyroZ());
+    } else Serial.println("Waiting for fresh IMU data");
+  }
 }
 ```
 
----
+Auto เลือก BNO085 ก่อน MPU9250 แล้วจึง MPU6050; ใช้หนึ่งเซนเซอร์ในแต่ละครั้ง เลือกชนิด/address เองได้ผ่าน imuBegin(type, address)
+ค่าความเร่ง m/s² รวม gravity, gyro rad/s, magnetic field µT และ Euler องศา ต้องตรวจ imuDataFresh() ก่อนใช้ข้อมูล
 
-## แค็ตตาล็อกตัวอย่างโค้ด (Examples Directory)
+MPU6050 รองรับ accel/gyro 6 แกน ไม่มี magnetometer และยังไม่ทำ orientation fusion: Euler/quaternion เป็น NaN และ imuOrientationFresh() เป็น false
 
-ชุดตัวอย่างทั้งหมดกว่า 39 สเก็ตช์ ผ่านการทดสอบคอมไพล์ 100% บน `RB_Nexus:esp32:rb_nexus`:
+## ควบคุมมอเตอร์
 
-### 1. ระบบฮาร์ดแวร์พื้นฐาน & Subsystem Tests
-- **`RB_Nexus_SelfTest`**: สเก็ตช์ตรวจวัดตัวเองอัตโนมัติ (MCU, Flash, Wi-Fi, Bluetooth, PCA9685, MCP3208)
-- **`FullBoardTest`**: เมนูทดสอบรวมทุกระบบแบบ Interactive สำหรับ QC
-- **`MotorTest` & `MotorPID`**: ทดสอบมอเตอร์ M1..M4 พร้อมโหมด Diagnostic วิเคราะห์รายขา และระบบ Closed-loop PID
-- **`ServoTest`**: กวาดมุมเซอร์โวมอเตอร์ 8 แชนแนล (CH8..CH15)
-- **`EncoderTest`**: อ่านพัลส์เอนโค้ดเดอร์ 4 ชุดแบบเรียลไทม์
-- **`AnalogMCP3208`**: อ่านค่า ADC 12-bit ทั้ง 8 ช่อง (A1..A8)
-- **`DigitalIO` & `ButtonDebounce`**: ใช้งานพอร์ตดิจิทัล D4, D12, D14, D26, D27
-- **`CANLoopback` & `IMURaw`**: สื่อสารผ่าน CAN Bus (TWAI) และเซนเซอร์วัดความเฉื่อย 6 แกน
-- **`BluetoothSerialEcho` & `WiFiScan`**: การสื่อสารไร้สายของ ESP32
-
-### 2. หุ่นยนต์ micro-ROS (ROS 2 Humble / Jazzy)
-โฟลเดอร์ `examples/micro_ros/` บรรจุ 18 ตัวอย่างสำหรับการเชื่อมต่อกับ ROS 2:
-- `01_Publisher` — Heartbeat String Publisher
-- `02_Subscriber` / `03_LED_Subscriber` — รับคำสั่งควบคุมไฟ LED จาก ROS 2
-- `04_Button_Publisher` — ส่งสถานะปุ่มกด/ดิจิทัลอินพุต
-- `05_ADC_Publisher` / `06_MCP3208_AllChannels` — ส่งค่าอนาล็อก 12-bit
-- `07_Encoder_Publisher` — ส่งค่าตำแหน่งล้อจากเอนโค้ดเดอร์
-- `08_Motor_Subscriber` / `09_MotorEncoder` — รับคำสั่งความเร็วมอเตอร์พร้อมฟีดแบ็ก
-- `10_IMU_Publisher` — ส่งข้อมูล `sensor_msgs/Imu`
-- `11_Battery_Publisher` — ส่งระดับแรงดันแบตเตอรี่ `sensor_msgs/BatteryState`
-- `12_DigitalIO` — ควบคุม I/O ผ่าน ROS 2
-- `13_Servo_Subscriber` / `14_PWM_Subscriber` — ควบคุมเซอร์โวและ PWM
-- `15_AllSensors` / `16_RobotStatus` — ส่งข้อมูลเซนเซอร์รวมและสถานะหุ่นยนต์
-- `17_WiFiTransport` — micro-ROS UDP Transport ไร้สาย
-- `18_SerialTransport` — micro-ROS Serial UART Transport ผ่าน USB
-
----
-
-## สำหรับนักพัฒนาและวิศวกร (Developer Workflow)
-
-### การสร้างแพ็กเกจ Boards Manager
-```bash
-python3 scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
-python3 scripts/verify_package.py
+```cpp
+RB.motorSet(4, 128);  // ช่วง -255..255
+RB.motorStop(4);      // หยุดและปิด PID
+RB.emergencyStop();   // latch จนเรียก clearEmergencyStop()
 ```
 
-### การรันชุดทดสอบคอมไพล์ทุกตัวอย่าง
-```bash
-python3 scripts/compile_examples.py
+เรียก RB.update() ใน loop สำหรับ PID, IMU และ software watchdog. ตัวอย่าง ROS มอเตอร์หยุดเมื่อไม่มีคำสั่ง 500 ms; ส่งคำสั่งซ้ำอย่างน้อย 10 Hz
+
+## คู่มือและการทดสอบ
+
+- [คู่มือ HTML](docs/html/index.html)
+- [MPU6050 / MPU9250 / GY-BNO085](docs/html/imu.html)
+- [API](docs/html/api.html)
+- [micro-ROS](docs/html/microros.html)
+- [ผลการตรวจรุ่น 0.2.1](docs/TEST_RESULTS_0.2.1.md)
+- [รายงานข้อผิดพลาดก่อนแก้](docs/CODE_REVIEW_2026-10-06.md)
+
+```sh
+python scripts/install_dependencies.py --config-file arduino-cli.yaml
+python scripts/test_host.py
+python scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
+python scripts/verify_package.py
+python scripts/compile_examples.py --config-file arduino-cli.yaml
 ```
 
----
-*ลิขสิทธิ์ &copy; 2026 Redbrick Robotics*
+ยังต้องทดสอบบนบอร์ดจริง โดยเฉพาะ I2C ของ BNO085, calibration/แกน IMU และการหยุดมอเตอร์ รายงานเดิมระบุข้อจำกัด PCB ของ M1/M2/M3; การแก้ซอฟต์แวร์ไม่ได้ยืนยันว่าแก้ปัญหาวงจรแล้ว

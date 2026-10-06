@@ -22,6 +22,7 @@ void output_callback(const void* msgin) {
 }
 
 void setup() {
+  Serial.begin(115200);
   RB.begin();
   RB.pinMode(RB_PIN_D4,  INPUT_PULLUP);
   RB.pinMode(RB_PIN_D12, OUTPUT);
@@ -31,21 +32,21 @@ void setup() {
 
   set_microros_transports();
   allocator = rcutils_get_default_allocator();
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "rb_nexus_digital_io", "", &support);
+  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
+  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_digital_io", "", &support));
 
-  rclc_publisher_init_default(
+  rbROSCheck(rclc_publisher_init_default(
     &pub_input, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    RB_TOPIC_DIGITAL_IN);
+    RB_TOPIC_DIGITAL_IN));
 
-  rclc_subscription_init_default(
+  rbROSCheck(rclc_subscription_init_default(
     &sub_output, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    RB_TOPIC_DIGITAL_OUT);
+    RB_TOPIC_DIGITAL_OUT));
 
-  rclc_executor_init(&executor, &support.dummy, 1, &allocator);
-  rclc_executor_add_subscription(&executor, &sub_output, &msg_out, &output_callback, ON_NEW_DATA);
+  rbROSCheck(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_output, &msg_out, &output_callback, ON_NEW_DATA));
 }
 
 void loop() {

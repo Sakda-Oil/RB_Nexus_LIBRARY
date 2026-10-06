@@ -1,100 +1,37 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>การติดตั้ง (Installation Guide) — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>การติดตั้ง — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link active">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>คู่มือการติดตั้งแพ็กเกจบอร์ด RB_Nexus</h1>
-      <p style="color: var(--text-muted);">ขั้นตอนการติดตั้งบอร์ดลงใน Arduino IDE 2.x และการตั้งค่าไดรเวอร์ในระบบปฏิบัติการต่างๆ</p>
-    </header>
-
-    <h2>1. การเพิ่ม Additional Boards Manager URL</h2>
-    <p>เปิดโปรแกรม <strong>Arduino IDE 2.x</strong> จากนั้นเข้าไปที่เมนู <strong>File &gt; Preferences</strong> (หรือกด <code>Ctrl + ,</code> บน Windows / <code>Cmd + ,</code> บน macOS)</p>
-    <p>ในช่อง <strong>Additional Boards Manager URLs</strong> ให้วาง URL ดังต่อไปนี้:</p>
-
-    <pre><code>https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nexus_index.json</code></pre>
-
-    <div class="alert alert-info">
-      <strong>ข้อแนะนำ:</strong> หากมี URL ของบอร์ดอื่นอยู่แล้ว ให้กดปุ่มหน้าต่างขวามือของช่องเพื่อเพิ่มบรรทัดใหม่ โดยไม่ต้องลบ URL เดิมออก
-    </div>
-
-    <h2>2. ติดตั้งบอร์ดผ่าน Boards Manager</h2>
-    <ol>
-      <li>คลิกที่ไอคอน <strong>Boards Manager</strong> ที่แถบเครื่องมือด้านซ้าย (หรือเมนู <strong>Tools &gt; Board &gt; Boards Manager...</strong>)</li>
-      <li>พิมพ์ค้นหาคำว่า <code>RB_Nexus</code></li>
-      <li>กดปุ่ม <strong>INSTALL</strong> เพื่อติดตั้งแพ็กเกจเวอร์ชันล่าสุด (0.2.0)</li>
-      <li>รอจนกว่า Arduino IDE จะดาวน์โหลดคอมไพเลอร์และแพ็กเกจ core ESP32 จนเสร็จสมบูรณ์</li>
-    </ol>
-
-    <h2>3. การติดตั้งไดรเวอร์ USB-UART (CH340 Driver Setup)</h2>
-    <p>บอร์ด RB_Nexus V0.1 ใช้ชิป <strong>CH340</strong> สำหรับสื่อสารผ่านพอร์ต USB Type-C:</p>
-
-    <h3>ระบบปฏิบัติการ Windows</h3>
-    <ul>
-      <li>โดยปกติ Windows 10 และ 11 จะติดตั้งไดรเวอร์ CH340 ให้อัตโนมัติเมื่อเสียบสาย USB</li>
-      <li>หากใน <strong>Device Manager</strong> พบเครื่องหมายตกใจสีเหลือง หรือไม่พบพอร์ต COM ให้ดาวน์โหลดไดรเวอร์ <strong>CH341SER.EXE</strong> จากผู้ผลิต WCH แล้วติดตั้ง</li>
-    </ul>
-
-    <h3>ระบบปฏิบัติการ Ubuntu / Linux</h3>
-    <p>ระบบ Linux มีไดรเวอร์เคอร์เนล <code>ch341</code> อยู่แล้ว แต่ต้องตั้งค่า Permission ให้ผู้ใช้เข้าถึงพอร์ต <code>/dev/ttyUSB0</code> ได้:</p>
-    <pre><code># 1. เพิ่ม User ปัจจุบันเข้ากลุ่ม dialout
-sudo usermod -a -G dialout $USER
-
-# 2. ปิดบริการ brltty (Braille TTY) หากระบบตัดการเชื่อมต่อ CH340 อัตโนมัติ
-sudo systemctl stop brltty-udev.service
-sudo systemctl mask brltty-udev.service
-sudo apt remove brltty -y
-
-# 3. Log out และ Log in ใหม่เพื่อให้สิทธิ์มีผล</code></pre>
-
-    <h3>ระบบปฏิบัติการ macOS</h3>
-    <ul>
-      <li>พอร์ตของบอร์ดจะปรากฏในรูปแบบ <code>/dev/cu.wchusbserial*</code> หรือ <code>/dev/cu.usbserial*</code></li>
-      <li>หากไม่ปรากฏพอร์ต ให้ติดตั้ง WCH CH34xVCPDriver สำหรับ macOS</li>
-    </ul>
-
-    <h2>4. การเลือกบอร์ดและทดสอบอัปโหลด</h2>
-    <ol>
-      <li>ไปที่เมนู <strong>Tools &gt; Board &gt; RB_Nexus &gt; RB_Nexus</strong></li>
-      <li>ไปที่เมนู <strong>Tools &gt; Port</strong> แล้วเลือกพอร์ตที่เชื่อมต่อกับบอร์ด</li>
-      <li>เปิดตัวอย่าง <strong>File &gt; Examples &gt; RB_Nexus &gt; BoardInfo</strong></li>
-      <li>กดปุ่ม <strong>Upload</strong> (รูปลูกศรชี้ขวา)</li>
-      <li>เปิด <strong>Serial Monitor</strong> ที่ความเร็ว <strong>115200 baud</strong> เพื่อดูรายงานข้อมูลของบอร์ด</li>
-    </ol>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>การติดตั้ง</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<h2>1. Boards Manager</h2><p>เพิ่ม URL ด้านล่างใน Arduino IDE → Preferences → Additional Boards Manager URLs แล้วติดตั้ง RB_Nexus และเลือกบอร์ด RB_Nexus</p><div class="code-container"><pre><code>https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nexus_index.json</code></pre></div><h2>2. ไลบรารีเซนเซอร์</h2><p>ใน Library Manager ติดตั้ง <strong>MPU9250 โดย hideakitai 0.4.8</strong> และ <strong>Adafruit BNO08x 1.2.7</strong> พร้อม Adafruit BusIO และ Adafruit Unified Sensor ที่ระบบเสนอ ต้องติดตั้งทั้งสองไลบรารี เพราะไดรเวอร์ RB_Nexus รองรับการเลือกเซนเซอร์ขณะทำงาน</p><div class="code-container"><pre><code>arduino-cli lib install &quot;MPU9250@0.4.8&quot; &quot;Adafruit BNO08x@1.2.7&quot;</code></pre></div><h2>3. ตรวจบอร์ด</h2><p>เปิด Blink / BoardInfo แล้วอัปโหลด จากนั้นต่อ IMU และใช้ IMURaw เปิด Serial Monitor 115200 baud; ตัวอย่างทั่วไปไม่ต้องติดตั้ง micro-ROS</p><h2>4. สำหรับ ROS เท่านั้น</h2><p>ติดตั้ง micro_ros_arduino ตาม <a href="microros.html">คู่มือ micro-ROS</a> ก่อนเปิดตัวอย่างในโฟลเดอร์ micro_ros</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

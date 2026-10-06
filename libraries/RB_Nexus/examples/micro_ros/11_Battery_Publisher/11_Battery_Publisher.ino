@@ -8,16 +8,17 @@ rcl_allocator_t allocator;
 rcl_node_t node;
 
 void setup() {
+  Serial.begin(115200);
   RB.begin();
 
   set_microros_transports();
   allocator = rcutils_get_default_allocator();
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "rb_nexus_battery_pub", "", &support);
-  rclc_publisher_init_default(
+  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
+  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_battery_pub", "", &support));
+  rbROSCheck(rclc_publisher_init_default(
     &publisher, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, BatteryState),
-    RB_TOPIC_BATTERY);
+    RB_TOPIC_BATTERY));
 
   msg.power_supply_status = 0; // Unknown / Discharging
 }

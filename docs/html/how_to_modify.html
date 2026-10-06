@@ -1,109 +1,37 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>คู่มือการแก้ไขฮาร์ดแวร์ (How to Modify) — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คู่มือการแก้ไข — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link active">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>คู่มือการแก้ไขสำหรับฮาร์ดแวร์รอบถัดไป (How to Modify for Next Revision)</h1>
-      <p style="color: var(--text-muted);">คำแนะนำทีละขั้นตอนสำหรับวิศวกรในการอัปเดตผังขา เพิ่มบอร์ด Revision ใหม่ และต่อขยายเซนเซอร์</p>
-    </header>
-
-    <div class="alert alert-pass">
-      <strong>Single Source of Truth:</strong> ผังขาทั้งหมดของโปรเจกต์ถูกรวมศูนย์ไว้ที่ไฟล์เดียวคือ <code>libraries/RB_Nexus/src/RB_Nexus_Pins.h</code> ทำให้ง่ายต่อการบำรุงรักษาและไม่เกิดข้อขัดแย้งของพิน
-    </div>
-
-    <h2>1. ขั้นตอนการเปลี่ยนหรือเพิ่มพินใน RB_Nexus_Pins.h</h2>
-    <p>เมื่อมีการปรับเปลี่ยนเส้นทางลายวงจร (PCB Re-routing) บนบอร์ดรุ่นใหม่ ให้แก้ไขเฉพาะในไฟล์ <code>RB_Nexus_Pins.h</code>:</p>
-    <div class="code-container">
-      <pre><code>// ตัวอย่างการแก้ไขพินใน RB_Nexus_Pins.h
-#define RB_PIN_CAN_TX      4    // ย้าย CAN TX ไปยัง GPIO 4
-#define RB_PIN_CAN_RX      5    // ย้าย CAN RX ไปยัง GPIO 5
-
-// หากพินใดยังไม่ได้ต่อวงจร ให้คงค่า RB_PIN_UNDEFINED (-1) ไว้เสมอ
-#define RB_PIN_IMU_INT     RB_PIN_UNDEFINED</code></pre>
-    </div>
-
-    <h2>2. การเพิ่มการรองรับ Hardware Revision ใหม่ (เช่น Revision 0.2)</h2>
-    <p>สถาปัตยกรรมของไลบรารีออกแบบระบบรองรับหลาย Revision ผ่าน Macro Switching ไว้เรียบร้อยแล้ว:</p>
-    <div class="card">
-      <h3>ขั้นตอนการประกาศ Revision 0.2</h3>
-      <ol>
-        <li>เปิดไฟล์ <code>RB_Nexus_Pins.h</code></li>
-        <li>ประกาศ Revision ใหม่:
-          <div class="code-container">
-            <pre><code>#define RB_NEXUS_REV_01    1
-#define RB_NEXUS_REV_02    2
-
-// เลือก Revision ปัจจุบัน
-#ifndef RB_NEXUS_CURRENT_REV
-#define RB_NEXUS_CURRENT_REV  RB_NEXUS_REV_02
-#endif</code></pre>
-          </div>
-        </li>
-        <li>ใช้เงื่อนไขพรีโพรเซสเซอร์ <code>#if (RB_NEXUS_CURRENT_REV == RB_NEXUS_REV_02)</code> เพื่อกำหนดพินใหม่ โดยโค้ดของ V0.1 เดิมยังคงสามารถคอมไพล์ย้อนหลังได้ 100%</li>
-      </ol>
-    </div>
-
-    <h2>3. สิ่งที่ต้องแก้ไขบนแผ่นวงจรพิมพ์ (PCB Fix Checklist สำหรับ Revision 0.2)</h2>
-    <div class="card">
-      <ul>
-        <li><strong>แก้ไขวงจรขับมอเตอร์ M1 และ M3:</strong> ตรวจสอบขาสัญญาณ IN1/IN2 จากชิป PCA9685 ช่อง 0, 1, 4, 5 ว่าต่อเข้ากับ Gate ไดรเวอร์ของ H-Bridge สมบูรณ์หรือไม่ และตรวจสอบไฟเลี้ยง VCC/VMOT ของไดรเวอร์</li>
-        <li><strong>แก้ไขมอเตอร์ M2:</strong> ตรวจสอบลายวงจรช่อง CH3 (IN2) ของ PCA9685 ที่ขาดหาย เพื่อให้หมุนกลับทางได้ครบสองทิศทาง</li>
-        <li><strong>เพิ่ม CAN Transceiver IC:</strong> ติดตั้งไอซีแปลงระดับสัญญาณ CAN เช่น SN65HVD230 (3.3V) ต่อเข้ากับ GPIO ของ ESP32 เพื่อให้พอร์ต CAN ใช้งานได้จริง</li>
-        <li><strong>ระบุตำแหน่งและไอซีเซนเซอร์ IMU ให้ชัดเจน:</strong> ระบุพิน I2C หรือ SPI สำหรับเซนเซอร์ 6-DOF (เช่น MPU6050 หรือ ICM-42688-P)</li>
-      </ul>
-    </div>
-
-    <h2>4. การเพิ่มไลบรารีเซนเซอร์ I2C หรือ SPI ตัวใหม่</h2>
-    <p>ในการต่อขยายโมดูลภายนอกเพิ่มเติม เช่น จอ OLED หรือเซนเซอร์วัดระยะ ToF VL53L0X:</p>
-    <div class="code-container">
-      <pre><code>// ใช้บัส I2C ร่วมกับพินมาตรฐานของ RB_Nexus
-#include &lt;RB_Nexus.h&gt;
-#include &lt;Adafruit_VL53L0X.h&gt;
-
-Adafruit_VL53L0X lox = Adafruit_VL53L0X();
-
-void setup() {
-  Nexus.begin(); // เริ่มต้นบัส I2C (SDA=21, SCL=22) และ PCA9685
-  if (!lox.begin()) {
-    Serial.println("Failed to boot VL53L0X");
-  }
-}</code></pre>
-    </div>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>คู่มือการแก้ไข</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<ol><li>แก้ RB_Nexus_Pins.h เฉพาะเมื่อมี schematic ยืนยัน</li><li>แยกการหยุดมอเตอร์ระดับ API ออกจากการเขียนเอาต์พุตภายใน PID</li><li>หากเพิ่ม IMU ให้ตรวจ chip identity, หน่วย, เวลา sample และ reset recovery</li><li>อัปเดตตัวอย่างและคู่มือให้ตรงกับ signature ใน header</li><li>รัน regression tests และ compile ด้วย dependency จริงก่อน push</li></ol><p>ห้ามใช้โค้ด dummy เพื่อทำให้ compile ผ่านแล้วระบุว่าทำงานจริง หากยังไม่รองรับให้รายงานข้อจำกัดอย่างชัดเจน</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

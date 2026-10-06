@@ -1,181 +1,60 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>API Reference — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Reference — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link active">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>API Reference</h1>
-      <p style="color: var(--text-muted);">คู่มือฟังก์ชัน คลาส และคำสั่งทั้งหมดของไลบรารี RB_Nexus สำหรับ ESP32</p>
-    </header>
-
-    <div class="alert alert-info">
-      <strong>Header File:</strong> เพียงแค่ใส่ <code>#include &lt;RB_Nexus.h&gt;</code> ในโปรเจกต์ของคุณ ระบบจะทำการ include คอนฟิกขา คลาสฮาร์ดแวร์ และสร้างอินสแตนซ์สากล <code>Nexus</code> ให้ใช้งานได้ทันที
-    </div>
-
-    <h2>1. ฟังก์ชันระบบหลัก (System Core)</h2>
-    <div class="card">
-      <h3>Nexus.begin()</h3>
-      <p>เริ่มต้นระบบบัส I2C, SPI, ชิป PCA9685, ตั้งค่าสถานะเริ่มต้นของมอเตอร์และขา I/O ทั้งหมด</p>
-      <div class="code-container">
-        <pre><code>bool begin(unsigned long baud = 115200);</code></pre>
-      </div>
-      <p><strong>พารามิเตอร์:</strong> <code>baud</code> (ค่าเริ่มต้น 115200) - ความเร็ว Serial Monitor</p>
-      <p><strong>คืนค่า:</strong> <code>true</code> หากพบชิป PCA9685 บนบัส I2C ที่แอดเดรส 0x40 สำเร็จ</p>
-    </div>
-
-    <div class="card">
-      <h3>Nexus.printBoardInfo()</h3>
-      <p>พิมพ์ข้อมูลสรุปฮาร์ดแวร์ เวอร์ชันไลบรารี สเปคไมโครคอนโทรลเลอร์ ESP32 และผังขาไปยัง Serial Monitor</p>
-      <div class="code-container">
-        <pre><code>void printBoardInfo();</code></pre>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Nexus.watchdogFeed() & enableWatchdog()</h3>
-      <p>เปิดใช้งานและรีเซ็ตซอฟต์แวร์วอทช์ด็อกเพื่อความปลอดภัย เมื่อหุ่นยนต์ขาดการสื่อสาร มอเตอร์ทั้งหมดจะหยุดหมุนอัตโนมัติ (E-Stop)</p>
-      <div class="code-container">
-        <pre><code>void enableWatchdog(uint32_t timeout_ms = 1000);
-void watchdogFeed();
-bool isWatchdogTriggered();</code></pre>
-      </div>
-    </div>
-
-    <h2>2. Status LED & Digital I/O</h2>
-    <div class="card">
-      <h3>Nexus.setLED() & toggleLED()</h3>
-      <p>ควบคุมไฟสถานะบนบอร์ด (ต่อกับ GPIO 2, Active HIGH)</p>
-      <div class="code-container">
-        <pre><code>void setLED(bool state);
-void toggleLED();
-void blinkLED(uint16_t on_ms, uint16_t off_ms);</code></pre>
-      </div>
-    </div>
-
-    <h2>3. ควบคุมดีซีมอเตอร์ (DC Motor Subsystem)</h2>
-    <p>ควบคุมมอเตอร์ 4 ช่อง (M1..M4) ขับผ่านชิปขยายขา PWM PCA9685 พร้อมฟังก์ชันคำนวณ Reversal Dead-time ป้องกัน Shoot-through</p>
-    <div class="card">
-      <h3>Nexus.motorDrive()</h3>
-      <div class="code-container">
-        <pre><code>void motorDrive(uint8_t channel, int16_t speed);</code></pre>
-      </div>
-      <p><strong>พารามิเตอร์:</strong></p>
-      <ul>
-        <li><code>channel</code>: ช่องมอเตอร์ 1 ถึง 4 (ตรงกับ M1, M2, M3, M4)</li>
-        <li><code>speed</code>: ความเร็วและทิศทาง ตั้งแต่ <code>-100</code> (ถอยหลังเต็มที่) ถึง <code>+100</code> (เดินหน้าเต็มที่), <code>0</code> คือหยุดหมุน (Coast)</li>
-      </ul>
-    </div>
-
-    <div class="card">
-      <h3>Nexus.motorStop() & motorStopAll()</h3>
-      <div class="code-container">
-        <pre><code>void motorStop(uint8_t channel);
-void motorStopAll(); // สั่งตัดกำลังมอเตอร์ทั้งหมดทันที (E-Stop)</code></pre>
-      </div>
-    </div>
-
-    <h2>4. ควบคุมเซอร์โวมอเตอร์ (Servo Subsystem)</h2>
-    <p>ควบคุม RC Servo ช่อง 8 ถึง 15 ความถี่ 50 Hz (20 ms period) ความละเอียด 12-bit จาก PCA9685</p>
-    <div class="card">
-      <h3>Nexus.servoWrite() & servoWriteMicroseconds()</h3>
-      <div class="code-container">
-        <pre><code>void servoWrite(uint8_t channel, uint8_t angle);
-void servoWriteMicroseconds(uint8_t channel, uint16_t us);</code></pre>
-      </div>
-      <p><strong>พารามิเตอร์:</strong></p>
-      <ul>
-        <li><code>channel</code>: ช่องเซอร์โว 8 ถึง 15</li>
-        <li><code>angle</code>: มุมองศา 0 ถึง 180</li>
-        <li><code>us</code>: ความกว้างพัลส์ไมโครวินาที (ช่วงมาตรฐาน 500 ถึง 2500 us)</li>
-      </ul>
-    </div>
-
-    <h2>5. อินเตอร์รัปต์เอนโค้ดเดอร์ (Quadrature Encoders)</h2>
-    <p>อ่านสัญญาณพัลส์ Quadrature (Phase A, B) 4 ช่องสัญญาณ ด้วยฮาร์ดแวร์ GPIO Interrupt ของ ESP32</p>
-    <div class="card">
-      <h3>Nexus.encoderInit() & getEncoderCount()</h3>
-      <div class="code-container">
-        <pre><code>void encoderInit(uint8_t channel);
-int32_t getEncoderCount(uint8_t channel);
-void resetEncoderCount(uint8_t channel);
-float getEncoderRPM(uint8_t channel, uint16_t ppr = 330);</code></pre>
-      </div>
-      <p><strong>แชนแนล:</strong> 1 (GPIO 36, 39), 2 (GPIO 34, 35), 3 (GPIO 32, 33), 4 (GPIO 25, 13)</p>
-    </div>
-
-    <h2>6. อนาล็อกภายนอก 12-bit (MCP3208 SPI ADC)</h2>
-    <div class="card">
-      <h3>Nexus.analogReadMCP()</h3>
-      <div class="code-container">
-        <pre><code>uint16_t analogReadMCP(uint8_t channel);
-float analogReadVoltage(uint8_t channel, float vref = 3.3f);</code></pre>
-      </div>
-      <p><strong>พารามิเตอร์:</strong> <code>channel</code>: ช่องอนาล็อก 0 ถึง 7 (ตรงกับพอร์ต A1 ถึง A8)</p>
-      <p><strong>คืนค่า:</strong> ค่าดิจิทัล 12-bit (0 ถึง 4095) หรือแรงดันไฟฟ้า (0.00V ถึง 3.30V)</p>
-    </div>
-
-    <h2>7. ระบบควบคุมความเร็ว PID (Speed Control)</h2>
-    <div class="card">
-      <h3>RB_Nexus_PID</h3>
-      <div class="code-container">
-        <pre><code>class RB_Nexus_PID {
-public:
-  RB_Nexus_PID(float kp, float ki, float kd);
-  void setTunings(float kp, float ki, float kd);
-  void setTargetRPM(float target);
-  int16_t compute(float current_rpm);
-  void reset();
-};</code></pre>
-      </div>
-    </div>
-
-    <h2>8. micro-ROS Subsystem</h2>
-    <p>อินเทอร์เฟซสื่อสารระดับสูงระหว่าง RB_Nexus กับ ROS 2 สถาปัตยกรรม State-Machine ปลอดภัย</p>
-    <div class="card">
-      <h3>RB_Nexus_MicroROS</h3>
-      <div class="code-container">
-        <pre><code>#include &lt;RB_Nexus_MicroROS.h&gt;
-
-RB_Nexus_MicroROS uros;
-uros.begin(115200);
-uros.spinSome();
-uros.isAgentConnected();</code></pre>
-      </div>
-    </div>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>API Reference</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<p>ใช้ #include &lt;RB_Nexus.h&gt; และ object <code>RB</code>; <code>RB_Nexus</code> เป็น alias ของ object เดียวกัน</p><h2>ระบบหลัก</h2><div class="code-container"><pre><code>bool begin(uint32_t i2cFreq = 400000, uint32_t spiFreq = 1000000);
+void update();
+void setLED(bool on);
+void toggleLED();</code></pre></div><p>เริ่ม Serial.begin(115200) แยกต่างหาก; begin() คืนสถานะพบ PCA9685 แม้ไม่พบ PCA ก็ยังลอง IMU ได้</p><h2>มอเตอร์และ PID</h2><div class="code-container"><pre><code>RB.motorSet(4, 128); // -255..255; ค่านอกช่วงถูก clamp
+RB.motorStop(4);     // หยุดและปิด PID ช่องนี้
+RB.motorStopAll();   // หยุดทุกช่องและปิด PID
+RB.motorSetPID(4, 1.2f, 0.5f, 0.05f);
+RB.motorSetRPM(4, 120); // เปิด PID; ต้อง encoderBegin() และ update()
+RB.motorPIDDisable(4);
+RB.emergencyStop(); // latch ป้องกัน motorSet/motorBrake
+RB.clearEmergencyStop();</code></pre></div><p>motorSet() เป็น open-loop จึงปิด PID ช่องนั้น; motorSetRPM(..., 0) หยุดและปิด PID; emergencyStop มีผลต่อมอเตอร์ผ่าน API มอเตอร์ ไม่ใช่วงจรหยุดฉุกเฉินอิสระ และ raw setPWM ยังเป็น API ระดับต่ำ</p><h2>Encoder</h2><div class="code-container"><pre><code>RB.encoderBegin();
+RB.encoderSetPPR(4, 330); // จำนวน ticks ที่นับจริงต่อรอบล้อ
+int32_t ticks = RB.encoderRead(4);
+float rpm = RB.encoderRPM(4);
+RB.encoderReset(4);</code></pre></div><p>นับ CHANGE ของ A (2 edges ต่อคาบ A) และอ่าน B เพื่อหาทิศทาง ต้องตั้ง PPR เป็นจำนวน counts ต่อรอบที่นับจริง RPM มี low-pass filter และอัปเดตทุกประมาณ 50 ms</p><h2>Analog, Servo และ PWM</h2><div class="code-container"><pre><code>uint16_t raw = RB.analogRead(1); // A1..A8 ใช้ 1..8 เท่านั้น
+float volts = RB.analogVoltage(1, 3.3f);
+RB.servoWrite(8, 90);           // CH8..15, มุม 0..180
+RB.servoWriteMicroseconds(8, 1500); // clamp 500..2500; 0 = detach
+RB.servoDetach(8);
+RB.pwmWrite(RB_PIN_D4, 128, 5000, 8);
+RB.pwmStop(RB_PIN_D4);</code></pre></div><p>PCA9685 ทุกช่องแชร์ความถี่เดียวกัน ค่าเริ่มต้นประมาณ 50 Hz เหมาะกับ RC servo การเปลี่ยน setPWMFreq() มีผลต่อทุกช่อง; pulse servo ที่สั่งใหม่คำนวณตามความถี่ที่ตั้งจริง</p><h2>Watchdog</h2><div class="code-container"><pre><code>RB.enableWatchdog(2000);
+RB.feedWatchdog();
+RB.update();
+bool stopped = RB.isEmergencyStopped();</code></pre></div><p>เป็น software watchdog ต้องเรียก update() จึงตรวจ timeout ได้ ไม่ทำงานระหว่างโปรแกรมค้าง ห้าม feed ทุก loop หากต้องการตรวจการขาดการสื่อสาร ให้ feed เมื่อได้รับคำสั่งที่ถูกต้อง</p><h2>IMU</h2><p>ดู <a href="imu.html">ชนิดเซนเซอร์ หน่วย และ freshness API</a>; ตัวประกาศทั้งหมดอยู่ใน libraries/RB_Nexus/src/RB_Nexus.h</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

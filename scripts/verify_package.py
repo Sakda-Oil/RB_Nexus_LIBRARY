@@ -31,8 +31,10 @@ with zipfile.ZipFile(archive) as z:
                  'libraries/RB_Nexus/src/RB_Nexus.h']:
         assert root + file in z.namelist(), file
     assert 'name=RB_Nexus\n' in z.read(root + 'platform.txt').decode()
-    for example in (ROOT / 'libraries/RB_Nexus/examples').glob('*/*.ino'):
+    for example in (ROOT / 'libraries/RB_Nexus/examples').rglob('*.ino'):
         assert root + example.relative_to(ROOT).as_posix() in z.namelist()
+    for source in (ROOT / 'libraries/RB_Nexus/src').glob('*'):
+        assert z.read(root + source.relative_to(ROOT).as_posix()) == source.read_bytes(), source
     boards = z.read(root + 'boards.txt').decode()
     props = dict(line.split('=', 1) for line in boards.splitlines() if '=' in line and not line.startswith('#'))
     assert props['rb_nexus.name'] == 'RB_Nexus'

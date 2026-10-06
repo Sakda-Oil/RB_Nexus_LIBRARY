@@ -1,186 +1,37 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ผังขา (Pinout Reference) — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ผังขา — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link active">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>ผังขาสัญญาณฮาร์ดแวร์ (Pinout Reference)</h1>
-      <p style="color: var(--text-muted);">ผังการเชื่อมต่อคอนเน็กเตอร์ภายนอกเข้าสู่ชิปประมวลผลของ RB Nexus V0.1</p>
-    </header>
-
-    <div class="alert alert-pass">
-      <strong>Single Source of Truth:</strong> ค่าคงที่ของขาทั้งหมดถูกกำหนดไว้ในไฟล์หัวเรื่อง <code>src/RB_Nexus_Pins.h</code> หากต้องการเปลี่ยนผังขาในฮาร์ดแวร์รุ่นถัดไป ให้แก้ไขที่จุดนี้จุดเดียว
-    </div>
-
-    <h2>ตารางเชื่อมต่อสัญญาณบอร์ด RB Nexus V0.1</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>ฟังก์ชัน (Function)</th>
-          <th>คอนเน็กเตอร์</th>
-          <th>ESP32 GPIO</th>
-          <th>โหมดสัญญาณ (Direction)</th>
-          <th>สถานะการทดสอบ (QC)</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Status LED</strong></td>
-          <td>Onboard LED</td>
-          <td><code>GPIO 2</code></td>
-          <td>Output (Active HIGH)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Digital I/O</strong></td>
-          <td>D4</td>
-          <td><code>GPIO 4</code></td>
-          <td>Digital In / Out</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Digital I/O</strong></td>
-          <td>D12</td>
-          <td><code>GPIO 12</code></td>
-          <td>Digital In / Out (Boot strapping)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Digital I/O</strong></td>
-          <td>D14</td>
-          <td><code>GPIO 14</code></td>
-          <td>Digital In / Out</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Digital I/O</strong></td>
-          <td>D26</td>
-          <td><code>GPIO 26</code></td>
-          <td>Digital In / Out</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Digital I/O</strong></td>
-          <td>D27</td>
-          <td><code>GPIO 27</code></td>
-          <td>Digital In / Out</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Encoder 1</strong></td>
-          <td>ENC1</td>
-          <td>A: <code>GPIO 36 (SP)</code>, B: <code>GPIO 39 (SN)</code></td>
-          <td>Input (Sensor Dedicated)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Encoder 2</strong></td>
-          <td>ENC2</td>
-          <td>A: <code>GPIO 34</code>, B: <code>GPIO 35</code></td>
-          <td>Input (Input Only)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Encoder 3</strong></td>
-          <td>ENC3</td>
-          <td>A: <code>GPIO 32</code>, B: <code>GPIO 33</code></td>
-          <td>Input (Pull-up)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Encoder 4</strong></td>
-          <td>ENC4</td>
-          <td>A: <code>GPIO 25</code>, B: <code>GPIO 13</code></td>
-          <td>Input (Pull-up)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>I2C Bus</strong></td>
-          <td>I2C Port</td>
-          <td>SDA: <code>GPIO 21</code>, SCL: <code>GPIO 22</code></td>
-          <td>Bidirectional (PCA9685 &amp; External)</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>SPI Bus</strong></td>
-          <td>MCP3208</td>
-          <td>MOSI: <code>GPIO 23</code>, MISO: <code>GPIO 19</code><br>CLK: <code>GPIO 18</code>, CS: <code>GPIO 5</code></td>
-          <td>SPI Master Bus</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>Analog Inputs</strong></td>
-          <td>A1 ถึง A8</td>
-          <td>ผ่านชิป MCP3208 (CH0 ถึง CH7)</td>
-          <td>Analog 12-bit (0-3.3V)</td>
-          <td><span class="badge badge-warn">Under Test</span></td>
-        </tr>
-        <tr>
-          <td><strong>DC Motors</strong></td>
-          <td>M1 ถึง M4</td>
-          <td>ผ่านชิป PCA9685 (PWM0 ถึง PWM7)</td>
-          <td>H-Bridge Drive (6-24V)</td>
-          <td><span class="badge badge-warn">M4 Pass / M1-3 Fix</span></td>
-        </tr>
-        <tr>
-          <td><strong>Servos</strong></td>
-          <td>Servo 8 ถึง 15</td>
-          <td>ผ่านชิป PCA9685 (PWM8 ถึง PWM15)</td>
-          <td>PWM 50 Hz Output</td>
-          <td><span class="badge badge-pass">QC Pass</span></td>
-        </tr>
-        <tr>
-          <td><strong>CAN Bus</strong></td>
-          <td>CAN Terminal</td>
-          <td>TX: <code>UNVERIFIED</code>, RX: <code>UNVERIFIED</code></td>
-          <td>Differential Bus</td>
-          <td><span class="badge badge-warn">Unverified</span></td>
-        </tr>
-        <tr>
-          <td><strong>IMU Connector</strong></td>
-          <td>IMU Port</td>
-          <td>SDA: <code>21</code>, SCL: <code>22</code> (I2C)</td>
-          <td>Auto-probe (0x68, 0x6A)</td>
-          <td><span class="badge badge-warn">Unverified</span></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p><a href="../pin_mapping.html" class="badge badge-pass" style="font-size: 1rem; padding: 0.5rem 1rem;">เปิดดูตาราง Pin Mapping แบบ Interactive Filter &rarr;</a></p>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>ผังขา</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<table><thead><tr><th>ระบบ</th><th>ขา / ช่อง</th></tr></thead><tbody><tr><td>LED</td><td>GPIO 2</td></tr><tr><td>Digital</td><td>4, 12, 14, 26, 27</td></tr><tr><td>I2C SDA / SCL</td><td>21 / 22 (PCA9685 และ IMU)</td></tr><tr><td>SPI MOSI / MISO / CLK / CS</td><td>23 / 19 / 18 / 5</td></tr><tr><td>Encoder 1..4 (A,B)</td><td>(36,39), (34,35), (32,33), (25,13)</td></tr><tr><td>PCA9685 motor 1..4</td><td>(0,1), (2,3), (4,5), (6,7)</td></tr><tr><td>Servo</td><td>PCA9685 CH8..15</td></tr><tr><td>ADC A1..A8</td><td>API 1..8 → MCP3208 CH0..7</td></tr></tbody></table><p>GPIO34..39 ไม่มี internal pull-up ต้องตรวจวงจร encoder; GPIO12 เป็น strapping pin ระวังระดับสัญญาณตอน boot รายการคงที่อยู่ใน RB_Nexus_Pins.h</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

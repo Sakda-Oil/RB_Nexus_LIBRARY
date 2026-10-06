@@ -1,9 +1,11 @@
+> Historical report: describes an earlier revision. For 0.2.1 see [current test results](TEST_RESULTS_0.2.1.md) and [IMU guide](html/imu.html).
+
 # RB_Nexus Project Audit Report
 
-**Date of Audit**: October 6, 2026  
-**Auditor**: Senior Embedded Systems & ROS 2 Engineer  
-**Hardware Target**: RB Nexus V0.1 (MCU: ESP32-WROOM-32, 240 MHz, 4MB Flash, USB-UART CH340)  
-**Core Version**: Arduino-ESP32 3.3.10  
+**Date of Audit**: October 6, 2026
+**Auditor**: Senior Embedded Systems & ROS 2 Engineer
+**Hardware Target**: RB Nexus V0.1 (MCU: ESP32-WROOM-32, 240 MHz, 4MB Flash, USB-UART CH340)
+**Core Version**: Arduino-ESP32 3.3.10
 
 ---
 

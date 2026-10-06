@@ -32,3 +32,12 @@ Hardware information and verified peripheral pin mapping for **RB Nexus V0.1**:
 - **MCP3208 ADC**:
   - Connected via standard ESP32 VSPI bus.
   - Full-scale reading: 0 to 4095 corresponding to 0 to 3.3V reference.
+
+## External IMU support in software 0.2.1
+
+- MPU6050: I2C 0x68/0x69, six-axis acceleration/gyro; no magnetometer.
+- MPU9250 + AK8963: I2C 0x68/0x69 (magnetometer 0x0C).
+- GY-BNO085: I2C 0x4A/0x4B in I2C mode.
+- Shared SDA GPIO21, SCL GPIO22; I2C logic/pull-ups must be 3.3 V.
+- Verify the supply and mode straps against the specific module. See [IMU guide](docs/html/imu.html).
+- Historical QC statements above are not new physical test results for this software release.

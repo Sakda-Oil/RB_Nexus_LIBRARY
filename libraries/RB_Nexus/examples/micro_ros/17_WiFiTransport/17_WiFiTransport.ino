@@ -14,18 +14,22 @@ rcl_allocator_t allocator;
 rcl_node_t node;
 
 void setup() {
+  Serial.begin(115200);
   RB.begin();
 
   // Set Wi-Fi transport for micro-ROS
-  set_microros_wifi_transports(ssid, pass, agent_ip, agent_port);
+  if (!RBMicroROS.beginWiFi(ssid, pass, agent_ip, agent_port)) {
+    RB.emergencyStop();
+    while (true) delay(100);
+  }
 
   allocator = rcutils_get_default_allocator();
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "rb_nexus_wifi_node", "", &support);
-  rclc_publisher_init_default(
+  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
+  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_wifi_node", "", &support));
+  rbROSCheck(rclc_publisher_init_default(
     &publisher, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/rb_nexus/wifi_test");
+    "/rb_nexus/wifi_test"));
 
   msg.data = 0;
 }

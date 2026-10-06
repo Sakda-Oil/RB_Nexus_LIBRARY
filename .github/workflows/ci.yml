@@ -21,6 +21,12 @@ jobs:
       - name: Set up Arduino CLI
         uses: arduino/setup-arduino-cli@v2
 
+      - name: Test driver logic and install real dependencies
+        run: |
+          python3 scripts/test_host.py
+          python3 scripts/check_docs.py
+          python3 scripts/install_dependencies.py
+
       - name: Build and verify package archive
         env:
           REPOSITORY: ${{ github.repository }}
@@ -42,4 +48,4 @@ jobs:
           arduino-cli core update-index --additional-urls "$index"
           version=$(cat VERSION)
           arduino-cli core install "RB_Nexus:esp32@$version" --additional-urls "$index"
-          python3 scripts/compile_examples.py
+          python3 scripts/compile_examples.py --installed-library

@@ -16,9 +16,11 @@
 
 namespace RBNexus {
 constexpr const char* name = "RB_Nexus";
-constexpr const char* version = "0.2.0";
+constexpr const char* version = "0.2.1";
 constexpr bool peripheralPinMapAvailable = true;
 }
+
+enum class RBIMUType : uint8_t { Auto, MPU9250, BNO085, MPU6050 };
 
 // PID Controller configuration structure
 struct RBPIDConfig {
@@ -130,20 +132,32 @@ public:
   bool i2cBegin(uint32_t freq = 400000);
   int  i2cScan(Print* out = &Serial);
 
-  // --- IMU (Modular / Auto-probe) ---
-  // Status: UNVERIFIED on V0.1 PCB (Pending schematic)
-  bool  imuBegin();
+  // I2C: MPU9250/MPU6050 0x68/0x69; BNO085 0x4A/0x4B. One active IMU.
+  bool  imuBegin(RBIMUType type = RBIMUType::Auto, uint8_t address = 0);
+  bool  imuUpdate(); // Also called by update(); true when a sensor report arrives.
+  bool  imuDataFresh(uint32_t maxAgeMs = 500) const;
+  bool  imuOrientationFresh(uint32_t maxAgeMs = 500) const;
+  RBIMUType imuType() const { return _imuType; }
   bool  isIMUAvailable() const { return _imuDetected; }
   const char* imuModelName() const { return _imuModel; }
+  // Acceleration: m/s^2 including gravity; angular velocity: rad/s.
   float accelX();
   float accelY();
   float accelZ();
   float gyroX();
   float gyroY();
   float gyroZ();
+  float magX(); // microtesla
+  float magY();
+  float magZ();
+  // Euler angles in degrees, native sensor/fusion frame (see IMU guide).
   float roll();
   float pitch();
   float yaw();
+  float quaternionW() const { return _quaternion[0]; }
+  float quaternionX() const { return _quaternion[1]; }
+  float quaternionY() const { return _quaternion[2]; }
+  float quaternionZ() const { return _quaternion[3]; }
 
   // --- CAN Bus (TWAI) ---
   // Status: COMPILE VERIFIED / HARDWARE TRANSCEIVER PINS UNVERIFIED
@@ -204,12 +218,23 @@ private:
   uint32_t _watchdogTimeoutMs;
   unsigned long _lastWatchdogFeed;
 
+  float _pwmFrequency = 50.0f;
+  uint32_t _lastRPMUpdate = 0;
+  uint8_t _pwmResolution[40] = {};
+  RBIMUType _imuType = RBIMUType::Auto;
+  uint8_t _imuReports = 0;
+  uint32_t _imuAccelTime = 0, _imuGyroTime = 0, _imuOrientationTime = 0;
+  float _mag[3] = {};
+  float _quaternion[4] = {1, 0, 0, 0};
+
   uint8_t readRegister8(uint8_t reg);
   void writeRegister8(uint8_t reg, uint8_t value);
   void updatePID();
   void updateEncodersRPM();
+  void motorOutputStop(uint8_t motorId);
+  void motorOutputSet(uint8_t motorId, int16_t speed);
 };
 
 // Global singleton instance
 extern RBNexusBoard RB;
-extern RBNexusBoard RB_Nexus;
+extern RBNexusBoard& RB_Nexus;

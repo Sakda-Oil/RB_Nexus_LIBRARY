@@ -1,122 +1,37 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Boards Manager & FQBN — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boards Manager — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link active">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>โครงสร้าง Board Package & FQBN</h1>
-      <p style="color: var(--text-muted);">รายละเอียดเมนู Tools, พารามิเตอร์การคอมไพล์ และการใช้งานผ่าน arduino-cli</p>
-    </header>
-
-    <h2>1. Fully Qualified Board Name (FQBN)</h2>
-    <p>รหัสระบุบอร์ดมาตรฐานสำหรับ Arduino CLI และระบบ Build อัตโนมัติคือ:</p>
-    <pre><code>RB_Nexus:esp32:rb_nexus</code></pre>
-
-    <h2>2. ค่าพารามิเตอร์เริ่มต้นในเมนู Tools (Default Board Options)</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>พารามิเตอร์ (Option)</th>
-          <th>ค่าเริ่มต้น (Default)</th>
-          <th>คำอธิบาย</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td><strong>Board</strong></td>
-          <td><code>RB_Nexus</code></td>
-          <td>ชื่อบอร์ดหลักที่แสดงในเมนู</td>
-        </tr>
-        <tr>
-          <td><strong>Upload Speed</strong></td>
-          <td><code>115200</code></td>
-          <td>ความเร็วอัปโหลดมาตรฐาน เสถียรสูงสุดกับชิป CH340</td>
-        </tr>
-        <tr>
-          <td><strong>CPU Frequency</strong></td>
-          <td><code>240MHz (WiFi/BT)</code></td>
-          <td>ความเร็วสัญญาณนาฬิกาซีพียู Xtensa Dual-Core</td>
-        </tr>
-        <tr>
-          <td><strong>Flash Frequency</strong></td>
-          <td><code>40MHz</code></td>
-          <td>ความเร็วบัส SPI Flash เพื่อความเสถียรของโมดูล WROOM-32</td>
-        </tr>
-        <tr>
-          <td><strong>Flash Mode</strong></td>
-          <td><code>DIO</code></td>
-          <td>Dual I/O SPI Mode</td>
-        </tr>
-        <tr>
-          <td><strong>Flash Size</strong></td>
-          <td><code>4MB (32Mb)</code></td>
-          <td>ขนาดความจุ Flash มาตรฐานของโมดูล WROOM-32 (ปรับเป็น 8MB/16MB ได้)</td>
-        </tr>
-        <tr>
-          <td><strong>Partition Scheme</strong></td>
-          <td><code>Default 4MB with spiffs</code></td>
-          <td>1.2MB App, 1.5MB SPIFFS</td>
-        </tr>
-        <tr>
-          <td><strong>Core Debug Level</strong></td>
-          <td><code>None</code></td>
-          <td>ปิดข้อความดีบักภายในเพื่อเพิ่มความเร็วในการรัน</td>
-        </tr>
-        <tr>
-          <td><strong>PSRAM</strong></td>
-          <td><code>Disabled</code></td>
-          <td>โมดูล ESP32-WROOM-32 ไม่มีชิป PSRAM ภายนอก</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h2>3. การใช้งานผ่าน Arduino CLI</h2>
-    <p>สามารถสั่งคอมไพล์และอัปโหลดโค้ดผ่าน Terminal ได้โดยตรง:</p>
-    <pre><code># 1. ตรวจสอบบอร์ดที่เชื่อมต่อ
-arduino-cli board list
-
-# 2. คอมไพล์โปรแกรม
-arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus libraries/RB_Nexus/examples/BoardInfo
-
-# 3. อัปโหลดลงบอร์ด (ระบุพอร์ตที่ตรวจพบ)
-arduino-cli upload -p /dev/ttyUSB0 --fqbn RB_Nexus:esp32:rb_nexus libraries/RB_Nexus/examples/BoardInfo
-
-# 4. เปิดดูข้อความ Serial
-arduino-cli monitor -p /dev/ttyUSB0 -c baudrate=115200</code></pre>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>Boards Manager</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<p>แพ็กเกจ RB_Nexus สร้างจาก Arduino-ESP32 core 3.3.10 พร้อม variant rb_nexus และ library ภายใน เลขรุ่นแพ็กเกจ 0.2.1 แยกจากเลขรุ่น core</p><p>ค่าเริ่มต้น: ESP32, flash 4 MB, DIO, flash clock 40 MHz, upload 115200 ตรวจขนาด flash จริงก่อนเลือก 8 MB</p><p>Library dependencies ของ IMU ต้องติดตั้งผ่าน Library Manager เพิ่ม แม้บอร์ดติดตั้งแล้ว ดู <a href="installation.html">การติดตั้ง</a></p><p>ไฟล์ index ต้องอ้าง archive ที่มีอยู่จริงและ checksum ตรงกัน; workflow จะอัปเดต index หลังเผยแพร่ asset สำเร็จ</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

@@ -1,92 +1,37 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>การ Release แพ็กเกจ (Release Process) — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>การเผยแพร่รุ่น — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link active">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>ขั้นตอนการ Release แพ็กเกจ (Release & Deployment Guide)</h1>
-      <p style="color: var(--text-muted);">กระบวนการปรับเลขเวอร์ชัน การแพ็กไฟล์ zip การอัปเดตไฟล์ดัชนี และการปล่อยขึ้น GitHub Releases</p>
-    </header>
-
-    <h2>1. การจัดการเลขเวอร์ชัน (Semantic Versioning)</h2>
-    <p>แพ็กเกจ RB_Nexus ใช้มาตรฐาน SemVer (MAJOR.MINOR.PATCH):</p>
-    <ul>
-      <li><strong>MAJOR:</strong> การเปลี่ยนแปลงสถาปัตยกรรมครั้งใหญ่ หรือมีการ Break API เก่า</li>
-      <li><strong>MINOR:</strong> การเพิ่มฟังก์ชันใหม่ รองรับบอร์ด Revision ใหม่ หรือเพิ่มไดรเวอร์เซนเซอร์</li>
-      <li><strong>PATCH:</strong> การแก้บั๊ก ปรับปรุงเอกสาร หรือปรับแต่งไทม์มิ่งเล็กน้อย</li>
-    </ul>
-
-    <h2>2. ขั้นตอนการ Release เวอร์ชันใหม่ทีละสเต็ป</h2>
-    <div class="card">
-      <ol>
-        <li><strong>ปรับเลขเวอร์ชัน:</strong> แก้ไขเลขในไฟล์ <code>VERSION</code> และไฟล์ <code>libraries/RB_Nexus/library.properties</code> ให้ตรงกัน (เช่น <code>0.2.0</code>)</li>
-        <li><strong>สร้างแพ็กเกจบอร์ด:</strong> รันสคริปต์อัตโนมัติ:
-          <div class="code-container">
-            <pre><code>python3 scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
-python3 scripts/verify_package.py</code></pre>
-          </div>
-        </li>
-        <li><strong>คัดลอกไฟล์ดัชนีไปยังรูทของ Repository:</strong>
-          <div class="code-container">
-            <pre><code>cp dist/package_RB_Nexus_index.json package_RB_Nexus_index.json</code></pre>
-          </div>
-        </li>
-        <li><strong>คอมมิตและพุชขึ้น Git:</strong>
-          <div class="code-container">
-            <pre><code>git add .
-git commit -m "Release version 0.2.0"
-git tag -a v0.2.0 -m "Release version 0.2.0"
-git push origin main --tags</code></pre>
-          </div>
-        </li>
-        <li><strong>สร้าง GitHub Release:</strong>
-          <p>ไปที่หน้า GitHub Repository เมนู <strong>Releases &gt; Draft a new release</strong> แนบแท็ก <code>v0.2.0</code> แล้วอัปโหลดไฟล์ <code>dist/RB_Nexus-esp32-0.2.0.zip</code> ขึ้นเป็น Release Asset</p>
-        </li>
-      </ol>
-    </div>
-
-    <h2>3. การตรวจสอบความถูกต้องก่อน Release (Checklist)</h2>
-    <div class="alert alert-pass">
-      <ul>
-        <li>[x] ทุกสเก็ตช์ตัวอย่างคอมไพล์ผ่าน 100% ด้วย <code>scripts/compile_all_examples.py</code></li>
-        <li>[x] ไฟล์ <code>package_RB_Nexus_index.json</code> มีค่า SHA-256 และ size ตรงกับไฟล์ zip ใน dist จริง</li>
-        <li>[x] ผังขาใน <code>RB_Nexus_Pins.h</code> และ <code>pins_arduino.h</code> สอดคล้องกัน</li>
-      </ul>
-    </div>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>การเผยแพร่รุ่น</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<p>เพิ่ม VERSION, library.properties และ RBNexus::version ให้ตรงกัน แล้วอัปเดตรายงานทดสอบและคู่มือ</p><ol><li>build archive จาก upstream ที่ตรวจ SHA-256 แล้ว</li><li>ตรวจแพ็กเกจและติดตั้งผ่าน local test index</li><li>ติดตั้ง IMU และ micro-ROS dependencies จริง แล้ว compile ทุกตัวอย่าง</li><li>เผยแพร่ immutable GitHub Release พร้อม archive และ index</li><li>อัปเดต root index หลัง upload สำเร็จเท่านั้น</li></ol><p>workflow release.yml ทำขั้นตอนนี้เมื่อ push main ถ้า tag มีอยู่แล้วต้องเพิ่มเลขรุ่น ห้ามเขียนทับ archive ของรุ่นที่เผยแพร่แล้ว</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

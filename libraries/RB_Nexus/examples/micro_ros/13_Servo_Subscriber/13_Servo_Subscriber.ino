@@ -15,20 +15,21 @@ void servo_callback(const void* msgin) {
 }
 
 void setup() {
+  Serial.begin(115200);
   RB.begin();
   RB.servoAttach(8);
 
   set_microros_transports();
   allocator = rcutils_get_default_allocator();
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "rb_nexus_servo_sub", "", &support);
-  rclc_subscription_init_default(
+  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
+  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_servo_sub", "", &support));
+  rbROSCheck(rclc_subscription_init_default(
     &subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
-    RB_TOPIC_SERVO_1_CMD);
+    RB_TOPIC_SERVO_1_CMD));
 
-  rclc_executor_init(&executor, &support.dummy, 1, &allocator);
-  rclc_executor_add_subscription(&executor, &subscriber, &msg, &servo_callback, ON_NEW_DATA);
+  rbROSCheck(rclc_executor_init(&executor, &support.context, 1, &allocator));
+  rbROSCheck(rclc_executor_add_subscription(&executor, &subscriber, &msg, &servo_callback, ON_NEW_DATA));
 }
 
 void loop() {

@@ -1,140 +1,40 @@
 <!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>การทดสอบบอร์ด (Testing & QC) — RB_Nexus</title>
-  <link rel="stylesheet" href="style.css">
-  <script src="script.js" defer></script>
-</head>
-<body>
-  <nav class="sidebar">
-    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.0</span></a>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>การทดสอบ — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
     <div class="nav-section-title">เริ่มต้นใช้งาน</div>
     <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
     <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
     <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
     <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
     <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
     <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
     <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link">MPU6050 / MPU9250 / BNO085</a>
     <a href="api.html" class="nav-link">API Reference</a>
     <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
     <div class="nav-section-title">ROS 2 & micro-ROS</div>
     <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
     <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
     <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
     <a href="testing.html" class="nav-link active">การทดสอบบอร์ด (Testing)</a>
     <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
     <div class="nav-section-title">สำหรับนักพัฒนา</div>
     <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
     <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-  <main class="main-content">
-    <header>
-      <h1>ขั้นตอนการทดสอบบอร์ด & การควบคุมคุณภาพ (QC Testing)</h1>
-      <p style="color: var(--text-muted);">กระบวนการตรวจสอบฮาร์ดแวร์จริงก่อนส่งมอบ และการใช้งานสเก็ตช์ Self-Test เพื่อวินิจฉัยปัญหา</p>
-    </header>
-
-    <div class="alert alert-info">
-      <strong>Interactive QC Checklist:</strong> บอร์ด RB_Nexus มีหน้าเว็บตรวจสอบคุณภาพแบบโต้ตอบได้ที่ไฟล์ <code>docs/hardware_test_checklist.html</code> สำหรับทีมผลิตใช้ติ๊กผลการทดสอบรายบอร์ด
-    </div>
-
-    <h2>1. โปรแกรมทดสอบตัวเองอัตโนมัติ (RB_Nexus_SelfTest)</h2>
-    <p>สเก็ตช์ <code>RB_Nexus_SelfTest.ino</code> ออกแบบมาเพื่อรันตรวจจับฮาร์ดแวร์ทุกชิ้นเมื่อจ่ายไฟเข้าบอร์ด และรายงานผลสรุปทาง Serial Monitor ที่ 115200 baud:</p>
-    <div class="card">
-      <h3>ลำดับการทดสอบอัตโนมัติ (Auto Test Routine)</h3>
-      <ol>
-        <li><strong>ESP32 Chip ID & Internal Clocks:</strong> ตรวจสอบแกน Dual-Core 240 MHz และ Flash 4MB</li>
-        <li><strong>PCA9685 I2C Probe:</strong> ปิงแอดเดรส <code>0x40</code> หากไม่พบจะแจ้งเตือนว่าบัส I2C ขาด หรือชิปไม่มีไฟเลี้ยง</li>
-        <li><strong>MCP3208 SPI Self-Loop:</strong> อ่านค่าแรงดัน Floating หรือ Channel Reference บนบัส SPI</li>
-        <li><strong>Status LED Verification:</strong> สั่งกะพริบ LED GPIO 2 จำนวน 3 ครั้งเพื่อยืนยันว่าบอร์ดบูตพร้อมทำงาน</li>
-        <li><strong>Motor Safe Coast:</strong> สั่งเคลียร์รีจิสเตอร์ PWM ทุกช่องเป็น 0% เพื่อป้องกันมอเตอร์หมุนกระตุกตอนเปิดเครื่อง</li>
-      </ol>
-    </div>
-
-    <h2>2. สรุปผลการตรวจสอบฮาร์ดแวร์จริง (Physical Hardware Verification Summary)</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>ระบบย่อย (Subsystem)</th>
-          <th>พิน / แอดเดรส</th>
-          <th>ผลการทดสอบจริงบนฮาร์ดแวร์</th>
-          <th>สถานะวิศวกรรม</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Status LED</td>
-          <td>GPIO 2</td>
-          <td>กะพริบปกติ Active HIGH</td>
-          <td><span class="badge badge-pass">PASS</span></td>
-        </tr>
-        <tr>
-          <td>Digital I/O</td>
-          <td>D4, D12, D14, D26, D27</td>
-          <td>ทดสอบทั้ง INPUT_PULLUP และ OUTPUT ผ่านทุกพิน</td>
-          <td><span class="badge badge-pass">PASS</span></td>
-        </tr>
-        <tr>
-          <td>Quadrature Encoders</td>
-          <td>ENC1(36,39), ENC2(34,35), ENC3(32,33), ENC4(25,13)</td>
-          <td>จับสัญญาณพัลส์ฮาร์ดแวร์อินเตอร์รัปต์ได้สมบูรณ์ทั้ง 4 ชุด</td>
-          <td><span class="badge badge-pass">PASS</span></td>
-        </tr>
-        <tr>
-          <td>Servo Outputs</td>
-          <td>PCA9685 CH8 – CH15</td>
-          <td>สัญญาณพัลส์ 50 Hz ขับเซอร์โวเคลื่อนที่ได้ตามมุม 0–180°</td>
-          <td><span class="badge badge-pass">PASS</span></td>
-        </tr>
-        <tr>
-          <td>DC Motor 4 (M4)</td>
-          <td>PCA9685 CH6, CH7</td>
-          <td>หมุนเดินหน้า-ถอยหลัง และหยุดได้สมบูรณ์</td>
-          <td><span class="badge badge-pass">PASS</span></td>
-        </tr>
-        <tr>
-          <td>DC Motor 2 (M2)</td>
-          <td>PCA9685 CH2, CH3</td>
-          <td>หมุนได้เพียงทิศทางเดียว (สัญญาณ CH3 หรือ H-Bridge ขาดวงจร)</td>
-          <td><span class="badge badge-warn">HARDWARE BUG</span></td>
-        </tr>
-        <tr>
-          <td>DC Motor 1, 3 (M1, M3)</td>
-          <td>PCA9685 CH0,1 / CH4,5</td>
-          <td>มอเตอร์ไม่หมุน (ไม่มีสัญญาณออกจากไดรเวอร์ ต้องตรวจเช็คลายวงจร)</td>
-          <td><span class="badge badge-fail">NON-FUNCTIONAL</span></td>
-        </tr>
-        <tr>
-          <td>MCP3208 12-bit ADC</td>
-          <td>SPI (MOSI=23, MISO=19, SCK=18, CS=5)</td>
-          <td>การสื่อสาร SPI ปกติ อ่านค่า A1..A8 อยู่ระหว่างการเทียบสเกลวงจรจริง</td>
-          <td><span class="badge badge-warn">REVISION PENDING</span></td>
-        </tr>
-        <tr>
-          <td>CAN Bus & IMU</td>
-          <td>Unassigned / Not Routed</td>
-          <td>พอร์ตมีบนบอร์ด แต่ยังไม่มีข้อมูล Schematic และวงจรทรานซีฟเวอร์ชัดเจน</td>
-          <td><span class="badge badge-warn">LACK SCHEMATIC</span></td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h2>3. รายการอุปกรณ์สำหรับห้องปฏิบัติการ QC</h2>
-    <ul>
-      <li>แหล่งจ่ายไฟปรับค่าได้ (DC Power Supply 12V 5A) พร้อมฟิวส์ป้องกันกระแสเกิน</li>
-      <li>สาย USB-C สำหรับต่อคอมพิวเตอร์และอัปโหลดโปรแกรม</li>
-      <li>มอเตอร์ทดสอบพร้อมเอนโค้ดเดอร์ 4 ชุด</li>
-      <li>RC เซอร์โวมอเตอร์มาตรฐาน (เช่น MG996R หรือ SG90) สำหรับทดสอบพอร์ตเซอร์โว</li>
-      <li>มัลติมิเตอร์ หรือออสซิลโลสโคปสำหรับวัดสัญญาณลอจิก PWM และ SPI</li>
-    </ul>
-
-    <footer>
-      <p>&copy; 2026 Redbrick Robotics &bull; RB_Nexus Technical Documentation</p>
-    </footer>
-  </main>
-</body>
-</html>
+<main class="main-content"><header><h1>การทดสอบ</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<h2>ทดสอบซอฟต์แวร์</h2><div class="code-container"><pre><code>python scripts/test_host.py
+python scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
+python scripts/verify_package.py
+python scripts/compile_examples.py --config-file arduino-cli.yaml</code></pre></div><p>ใช้เครื่องมือและ dependency ตามคู่มือนักพัฒนา ผลที่ตรวจจริงบันทึกใน <a href="../TEST_RESULTS_0.2.1.md">รายงานรุ่น 0.2.1</a></p><h2>ตรวจบนบอร์ดก่อนใช้งาน</h2><ol><li>ทดสอบ IMURaw กับ MPU9250 และ BNO085 แยกครั้ง: วางนิ่ง หมุนแต่ละแกน ตรวจหน่วยและทิศทาง</li><li>ถอด IMU: freshness ต้องหมดอายุและ ROS หยุดส่งข้อมูลเก่า</li><li>ยกล้อให้พ้นพื้น เปิด PID แล้ว motorStop(): ต้องไม่กลับมาหมุน</li><li>ส่ง ROS motor command 10 Hz แล้วหยุดส่ง: มอเตอร์ต้องหยุดหลัง timeout ประมาณ 500 ms บวกเวลารอบ loop</li><li>ทดสอบ emergencyStop: คำสั่งมอเตอร์ใหม่ต้องไม่ทำงานจน clear</li><li>วัด servo pulse ด้วย oscilloscope และตรวจ PCA9685 เมื่อเปลี่ยนความถี่</li></ol><p>software watchdog ต้องมี loop ที่เดินต่อได้ ไม่ทดแทนวงจรหยุดฉุกเฉินอิสระ</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

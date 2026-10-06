@@ -1,9 +1,11 @@
+> Historical report: describes an earlier revision. For 0.2.1 see [current test results](TEST_RESULTS_0.2.1.md) and [IMU guide](html/imu.html).
+
 # RB_Nexus Hardware & Software Validation Report (V0.1 / Library v0.2.0)
 
-**Date:** 2026-10-06  
-**Target Hardware:** RB_Nexus V0.1 (ESP32-WROOM-32, Dual-Core Xtensa LX6 @ 240MHz, 4MB Flash, USB-UART CH340)  
-**Package:** `RB_Nexus:esp32:rb_nexus` v0.2.0 (based on Arduino-ESP32 Core 3.3.10 / ESP-IDF 5.1)  
-**Repository:** [https://github.com/Sakda-Oil/RB_Nexus_LIBRARY](https://github.com/Sakda-Oil/RB_Nexus_LIBRARY)  
+**Date:** 2026-10-06
+**Target Hardware:** RB_Nexus V0.1 (ESP32-WROOM-32, Dual-Core Xtensa LX6 @ 240MHz, 4MB Flash, USB-UART CH340)
+**Package:** `RB_Nexus:esp32:rb_nexus` v0.2.0 (based on Arduino-ESP32 Core 3.3.10 / ESP-IDF 5.1)
+**Repository:** [https://github.com/Sakda-Oil/RB_Nexus_LIBRARY](https://github.com/Sakda-Oil/RB_Nexus_LIBRARY)
 
 ---
 
@@ -26,7 +28,7 @@
 ### 2. ส่วนไหน "Compile ผ่านแต่ยังไม่ได้ทดสอบ Hardware" (Compile Verified / Hardware Test Required)
 *ระบบที่โค้ดไดรเวอร์เสร็จสมบูรณ์ คอมไพล์ผ่าน 100% ในชุดทดสอบ แต่ยังรอการทดสอบต่อพ่วงบนบอร์ดจริง:*
 - **Closed-Loop PID Motor Speed Control:** คลาส `RB_Nexus_PID` คำนวณความเร็วมอเตอร์รอบปิดร่วมกับเอนโค้ดเดอร์ (คอมไพล์ผ่านทุกตัวอย่าง)
-- **micro-ROS Architecture & 18 ROS 2 Examples:** 
+- **micro-ROS Architecture & 18 ROS 2 Examples:**
   - สถาปัตยกรรม State Machine (WAITING_AGENT, AGENT_AVAILABLE, CONNECTED, DISCONNECTED)
   - วอทช์ด็อกตัดกำลังมอเตอร์ฉุกเฉิน (E-Stop Watchdog)
   - ทั้ง 18 สเก็ตช์ตัวอย่าง (Publisher, Subscriber, cmd_vel, JointStates, IMU, Odom, Battery, Range, Mecanum, Services) คอมไพล์ผ่าน 100% บน `RB_Nexus:esp32:rb_nexus`

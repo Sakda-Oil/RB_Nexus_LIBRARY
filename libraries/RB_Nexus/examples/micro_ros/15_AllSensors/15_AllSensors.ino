@@ -1,6 +1,8 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
+RBMotorCommandGuard motorCommands(500);
+
 // =============================================================================
 // micro-ROS AllSensors & AllActuators Example for RB_Nexus
 // =============================================================================
@@ -52,6 +54,7 @@ rcl_node_t      node;
 void cb_motor(const void* msgin) {
   const std_msgs__msg__Int16* msg = (const std_msgs__msg__Int16*)msgin;
   RB.motorSet(1, msg->data);
+  motorCommands.feed();
 }
 
 void cb_servo(const void* msgin) {
@@ -74,44 +77,50 @@ void cb_estop(const void* msgin) {
 }
 
 void setup() {
+  Serial.begin(115200);
   RB.begin();
   RB.encoderBegin();
   RB.imuBegin();
   RB.motorStopAll();
-  RB.enableWatchdog(3000); // 3-second watchdog
 
   set_microros_transports();
   allocator = rcutils_get_default_allocator();
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "rb_nexus_robot_node", "", &support);
+  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
+  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_robot_node", "", &support));
 
   // Initialize Publishers
-  rclc_publisher_init_default(&pub_analog, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32MultiArray), RB_TOPIC_ANALOG_MULTI);
-  rclc_publisher_init_default(&pub_encoder, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RB_TOPIC_ENCODER_CH1);
-  rclc_publisher_init_default(&pub_imu, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu), RB_TOPIC_IMU_RAW);
-  rclc_publisher_init_default(&pub_battery, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, BatteryState), RB_TOPIC_BATTERY);
-  rclc_publisher_init_default(&pub_status, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RB_TOPIC_ROBOT_STATUS);
+  rbROSCheck(rclc_publisher_init_default(&pub_analog, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32MultiArray), RB_TOPIC_ANALOG_MULTI));
+  rbROSCheck(rclc_publisher_init_default(&pub_encoder, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RB_TOPIC_ENCODER_CH1));
+  rbROSCheck(rclc_publisher_init_default(&pub_imu, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu), RB_TOPIC_IMU_RAW));
+  rbROSCheck(rclc_publisher_init_default(&pub_battery, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, BatteryState), RB_TOPIC_BATTERY));
+  rbROSCheck(rclc_publisher_init_default(&pub_status, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RB_TOPIC_ROBOT_STATUS));
 
   msg_analog.data.data = analog_buf;
   msg_analog.data.size = 8;
   msg_analog.data.capacity = 8;
 
-  // Initialize Subscribers
-  rclc_subscription_init_default(&sub_motor, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_MOTOR_1_CMD);
-  rclc_subscription_init_default(&sub_servo, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_SERVO_1_CMD);
-  rclc_subscription_init_default(&sub_pwm, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_PWM_CMD);
-  rclc_subscription_init_default(&sub_estop, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/rb_nexus/emergency_stop");
+  static char imuFrame[] = "imu_link";
+  msg_imu.header.frame_id.data = imuFrame;
+  msg_imu.header.frame_id.size = sizeof(imuFrame) - 1;
+  msg_imu.header.frame_id.capacity = sizeof(imuFrame);
+  rmw_uros_sync_session(1000);
 
-  rclc_executor_init(&executor, &support.dummy, 4, &allocator);
-  rclc_executor_add_subscription(&executor, &sub_motor, &cmd_motor, &cb_motor, ON_NEW_DATA);
-  rclc_executor_add_subscription(&executor, &sub_servo, &cmd_servo, &cb_servo, ON_NEW_DATA);
-  rclc_executor_add_subscription(&executor, &sub_pwm, &cmd_pwm, &cb_pwm, ON_NEW_DATA);
-  rclc_executor_add_subscription(&executor, &sub_estop, &cmd_estop, &cb_estop, ON_NEW_DATA);
+  // Initialize Subscribers
+  rbROSCheck(rclc_subscription_init_default(&sub_motor, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_MOTOR_1_CMD));
+  rbROSCheck(rclc_subscription_init_default(&sub_servo, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_SERVO_1_CMD));
+  rbROSCheck(rclc_subscription_init_default(&sub_pwm, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_PWM_CMD));
+  rbROSCheck(rclc_subscription_init_default(&sub_estop, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/rb_nexus/emergency_stop"));
+
+  rbROSCheck(rclc_executor_init(&executor, &support.context, 4, &allocator));
+  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_motor, &cmd_motor, &cb_motor, ON_NEW_DATA));
+  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_servo, &cmd_servo, &cb_servo, ON_NEW_DATA));
+  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_pwm, &cmd_pwm, &cb_pwm, ON_NEW_DATA));
+  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_estop, &cmd_estop, &cb_estop, ON_NEW_DATA));
 }
 
 void loop() {
+  motorCommands.update();
   RB.update();
-  RB.feedWatchdog();
   rclc_executor_spin_some(&executor, 1000000);
 
   unsigned long now = millis();
@@ -123,10 +132,7 @@ void loop() {
     msg_encoder.data = RB.encoderRead(1);
     rcl_publish(&pub_encoder, &msg_encoder, NULL);
 
-    msg_imu.linear_acceleration.x = RB.accelX();
-    msg_imu.linear_acceleration.y = RB.accelY();
-    msg_imu.linear_acceleration.z = RB.accelZ();
-    rcl_publish(&pub_imu, &msg_imu, NULL);
+    if (rbFillImuMessage(msg_imu)) rcl_publish(&pub_imu, &msg_imu, NULL);
   }
 
   // 2. Analog MCP3208 (20 Hz / 50ms)

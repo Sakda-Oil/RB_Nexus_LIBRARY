@@ -6,6 +6,7 @@
 
 #include "RB_Nexus.h"
 #include <WiFi.h>
+#include <math.h>
 #include <driver/gpio.h>
 #include <driver/twai.h>
 
@@ -118,12 +119,13 @@ void RBNexusBoard::update() {
   }
 
   // Encoders RPM computation (every 50 ms)
-  static unsigned long lastRPMUpdate = 0;
-  if (now - lastRPMUpdate >= 50) {
-    lastRPMUpdate = now;
+  if (now - _lastRPMUpdate >= 50) {
+    _lastRPMUpdate = now;
     updateEncodersRPM();
     updatePID();
   }
+
+  imuUpdate();
 
   // Background Wi-Fi Auto-reconnect check (every 5 seconds)
   if (_wifiAutoReconnect && (now - _lastWiFiCheck >= 5000)) {
@@ -158,18 +160,26 @@ void RBNexusBoard::pinMode(uint8_t pin, uint8_t mode) {
 
 // --- ESP32 Internal LEDC PWM ---
 bool RBNexusBoard::pwmWrite(uint8_t pin, uint32_t duty, uint32_t freq, uint8_t resolution) {
-  if (!ledcAttach(pin, freq, resolution)) {
-    return false;
+  if (pin >= 40 || resolution < 1 || resolution > 20 || freq == 0) return false;
+  if (_pwmResolution[pin] == 0) {
+    if (!ledcAttach(pin, freq, resolution)) return false;
+  } else if (_pwmResolution[pin] != resolution || ledcReadFreq(pin) != freq) {
+    if (ledcChangeFrequency(pin, freq, resolution) == 0) return false;
   }
-  return ledcWrite(pin, duty);
+  _pwmResolution[pin] = resolution;
+  const uint32_t maximum = (1UL << resolution) - 1;
+  return ledcWrite(pin, duty > maximum ? maximum : duty);
 }
 
 bool RBNexusBoard::pwmSetFrequency(uint8_t pin, uint32_t hz) {
-  return ledcChangeFrequency(pin, hz, 8) != 0;
+  return pin < 40 && _pwmResolution[pin] && hz &&
+         ledcChangeFrequency(pin, hz, _pwmResolution[pin]) != 0;
 }
 
 void RBNexusBoard::pwmStop(uint8_t pin) {
+  if (pin >= 40) return;
   ledcDetach(pin);
+  _pwmResolution[pin] = 0;
   ::pinMode(pin, OUTPUT);
   ::digitalWrite(pin, LOW);
 }
@@ -179,8 +189,6 @@ uint16_t RBNexusBoard::analogRead(uint8_t channel) {
   uint8_t mcpCh = 0;
   if (channel >= RB_ADC_CH_MIN && channel <= RB_ADC_CH_MAX) {
     mcpCh = channel - 1; // A1 -> CH0, ..., A8 -> CH7
-  } else if (channel <= 7) {
-    mcpCh = channel;
   } else {
     return 0;
   }
@@ -194,13 +202,13 @@ uint16_t RBNexusBoard::analogRead(uint8_t channel) {
   tx[1] = (mcpCh & 0x03) << 6;
   tx[2] = 0x00;
 
-  ::digitalWrite(RB_PIN_SPI_CS, LOW);
   SPI.beginTransaction(SPISettings(_spiFreq, MSBFIRST, SPI_MODE0));
+  ::digitalWrite(RB_PIN_SPI_CS, LOW);
   SPI.transfer(tx[0]);
   uint8_t b1 = SPI.transfer(tx[1]);
   uint8_t b2 = SPI.transfer(tx[2]);
-  SPI.endTransaction();
   ::digitalWrite(RB_PIN_SPI_CS, HIGH);
+  SPI.endTransaction();
 
   return ((uint16_t)(b1 & 0x0F) << 8) | b2;
 }
@@ -259,12 +267,13 @@ void RBNexusBoard::writeRegister8(uint8_t reg, uint8_t value) {
 }
 
 void RBNexusBoard::setPWMFreq(float freqHz) {
-  if (!_pcaConnected) return;
+  if (!_pcaConnected || !isfinite(freqHz)) return;
   if (freqHz < 24.0f) freqHz = 24.0f;
   if (freqHz > 1526.0f) freqHz = 1526.0f;
 
   float prescaleval = (25000000.0f / (4096.0f * freqHz)) - 1.0f;
   uint8_t prescale = (uint8_t)(prescaleval + 0.5f);
+  _pwmFrequency = 25000000.0f / (4096.0f * (prescale + 1));
 
   uint8_t oldmode = readRegister8(PCA9685_MODE1);
   uint8_t sleepmode = (oldmode & 0x7F) | 0x10;
@@ -300,8 +309,14 @@ void RBNexusBoard::setPWMDuty(uint8_t channel, uint16_t duty) {
 // --- DC Motor Control with Dead-time Safety ---
 void RBNexusBoard::motorSet(uint8_t motorId, int16_t speed) {
   if (motorId < 1 || motorId > 4) return;
+  _pid[motorId - 1].enabled = false;
+  motorOutputSet(motorId, speed);
+}
+
+void RBNexusBoard::motorOutputSet(uint8_t motorId, int16_t speed) {
+  if (motorId < 1 || motorId > 4) return;
   if (_emergencyStopActive) {
-    motorStop(motorId);
+    motorOutputStop(motorId);
     return;
   }
 
@@ -310,7 +325,7 @@ void RBNexusBoard::motorSet(uint8_t motorId, int16_t speed) {
   uint8_t chB = chA + 1;
 
   if (speed == 0) {
-    motorStop(motorId);
+    motorOutputStop(motorId);
     return;
   }
 
@@ -321,15 +336,14 @@ void RBNexusBoard::motorSet(uint8_t motorId, int16_t speed) {
     setPWMDuty(chA, 0);
     setPWMDuty(chB, 0);
     delay(_deadTimeMs);
+  } else if (_motorLastDir[idx] == 0) {
+    uint32_t elapsed = millis() - _motorLastStopTime[idx];
+    if (elapsed < _deadTimeMs) delay(_deadTimeMs - elapsed);
   }
 
-  int32_t absSpeed = abs(speed);
-  uint16_t duty = 0;
-  if (absSpeed <= 255) {
-    duty = (uint16_t)((absSpeed * 4095UL) / 255);
-  } else {
-    duty = (absSpeed > 4095) ? 4095 : (uint16_t)absSpeed;
-  }
+  int32_t absSpeed = speed < 0 ? -(int32_t)speed : speed;
+  if (absSpeed > 255) absSpeed = 255;
+  uint16_t duty = (uint16_t)((absSpeed * 4095UL) / 255);
 
   if (newDir > 0) {
     setPWMDuty(chA, duty);
@@ -352,6 +366,14 @@ void RBNexusBoard::motorBackward(uint8_t motorId, uint8_t speed) {
 
 void RBNexusBoard::motorStop(uint8_t motorId) {
   if (motorId < 1 || motorId > 4) return;
+  auto& pid = _pid[motorId - 1];
+  pid.enabled = false;
+  pid.targetRPM = pid.integral = pid.prevError = 0;
+  motorOutputStop(motorId);
+}
+
+void RBNexusBoard::motorOutputStop(uint8_t motorId) {
+  if (motorId < 1 || motorId > 4) return;
   uint8_t idx = motorId - 1;
   uint8_t chA = idx * 2;
   uint8_t chB = chA + 1;
@@ -363,6 +385,8 @@ void RBNexusBoard::motorStop(uint8_t motorId) {
 
 void RBNexusBoard::motorBrake(uint8_t motorId) {
   if (motorId < 1 || motorId > 4) return;
+  motorStop(motorId);
+  if (_emergencyStopActive) return;
   uint8_t idx = motorId - 1;
   uint8_t chA = idx * 2;
   uint8_t chB = chA + 1;
@@ -379,13 +403,7 @@ void RBNexusBoard::motorStopAll() {
 
 void RBNexusBoard::emergencyStop() {
   _emergencyStopActive = true;
-  for (uint8_t ch = 0; ch < 8; ++ch) {
-    setPWMDuty(ch, 0);
-  }
-  for (int i = 0; i < 4; ++i) {
-    _motorLastDir[i] = 0;
-    _pid[i].enabled = false;
-  }
+  motorStopAll();
   digitalWrite(RB_PIN_LED, LOW);
 }
 
@@ -393,6 +411,12 @@ void RBNexusBoard::emergencyStop() {
 void RBNexusBoard::motorSetRPM(uint8_t motorId, float rpm) {
   if (motorId < 1 || motorId > 4) return;
   uint8_t idx = motorId - 1;
+  if (_emergencyStopActive || !isfinite(rpm)) return;
+  if (rpm == 0) { motorStop(motorId); return; }
+  if (!_pid[idx].enabled) {
+    _pid[idx].integral = _pid[idx].prevError = 0;
+    _pid[idx].lastTime = millis();
+  }
   _pid[idx].targetRPM = rpm;
   _pid[idx].enabled = true;
 }
@@ -400,6 +424,7 @@ void RBNexusBoard::motorSetRPM(uint8_t motorId, float rpm) {
 void RBNexusBoard::motorSetPID(uint8_t motorId, float kp, float ki, float kd) {
   if (motorId < 1 || motorId > 4) return;
   uint8_t idx = motorId - 1;
+  if (!isfinite(kp) || !isfinite(ki) || !isfinite(kd)) return;
   _pid[idx].kp = kp;
   _pid[idx].ki = ki;
   _pid[idx].kd = kd;
@@ -407,7 +432,8 @@ void RBNexusBoard::motorSetPID(uint8_t motorId, float kp, float ki, float kd) {
 
 void RBNexusBoard::motorPIDEnable(uint8_t motorId) {
   if (motorId < 1 || motorId > 4) return;
-  _pid[motorId - 1].enabled = true;
+  if (_emergencyStopActive) return;
+  motorSetRPM(motorId, _pid[motorId - 1].targetRPM);
 }
 
 void RBNexusBoard::motorPIDDisable(uint8_t motorId) {
@@ -446,7 +472,7 @@ void RBNexusBoard::updatePID() {
     if (output > 255.0f) output = 255.0f;
     if (output < -255.0f) output = -255.0f;
 
-    motorSet(i + 1, (int16_t)output);
+    motorOutputSet(i + 1, (int16_t)output);
   }
 }
 
@@ -458,11 +484,16 @@ void RBNexusBoard::servoAttach(uint8_t channel) {
 
 void RBNexusBoard::servoWriteMicroseconds(uint8_t channel, uint16_t us) {
   if (channel < RB_SERVO_CH_MIN || channel > RB_SERVO_CH_MAX) return;
-  uint16_t ticks = (uint16_t)(((uint32_t)us * 4096UL + 10000UL) / 20000UL);
+  if (us == 0) { servoDetach(channel); return; }
+  if (us < 500) us = 500;
+  if (us > 2500) us = 2500;
+  uint32_t ticks = (uint32_t)(us * _pwmFrequency * 4096.0f / 1000000.0f + 0.5f);
+  if (ticks > 4095) ticks = 4095;
   setPWM(channel, 0, ticks);
 }
 
 void RBNexusBoard::servoWrite(uint8_t channel, uint8_t angle, uint16_t minUs, uint16_t maxUs) {
+  if (minUs > maxUs) return;
   if (angle > 180) angle = 180;
   uint16_t us = minUs + (uint16_t)(((uint32_t)angle * (maxUs - minUs)) / 180UL);
   servoWriteMicroseconds(channel, us);
@@ -572,8 +603,8 @@ int RBNexusBoard::i2cScan(Print* out) {
       if (out) {
         out->printf("  - Found device at 0x%02X", addr);
         if (addr == RB_PCA9685_ADDR) out->print(" (PCA9685 PWM Controller)");
-        else if (addr == 0x68 || addr == 0x69) out->print(" (Probable IMU: MPU6050 / BMI270)");
-        else if (addr == 0x6A || addr == 0x6B) out->print(" (Probable IMU: LSM6DS3)");
+        else if (addr == 0x68 || addr == 0x69) out->print(" (Possible MPU9250; identity not verified)");
+        else if (addr == 0x4A || addr == 0x4B) out->print(" (Possible BNO085; identity not verified)");
         out->println();
       }
       found++;
@@ -583,36 +614,6 @@ int RBNexusBoard::i2cScan(Print* out) {
   return found;
 }
 
-// --- IMU Modular Implementation ---
-bool RBNexusBoard::imuBegin() {
-  _imuDetected = false;
-  _imuModel = "None";
-
-  // Auto-probe MPU6050 / BMI270 at 0x68 and 0x69
-  uint8_t probeAddrs[] = {0x68, 0x69, 0x6A, 0x6B};
-  for (uint8_t addr : probeAddrs) {
-    Wire.beginTransmission(addr);
-    if (Wire.endTransmission() == 0) {
-      _imuAddress = addr;
-      _imuDetected = true;
-      if (addr == 0x68 || addr == 0x69) _imuModel = "MPU6050 / InvenSense";
-      else _imuModel = "LSM6DS3 / ST";
-      break;
-    }
-  }
-  return _imuDetected;
-}
-
-float RBNexusBoard::accelX() { return _accel[0]; }
-float RBNexusBoard::accelY() { return _accel[1]; }
-float RBNexusBoard::accelZ() { return _accel[2]; }
-float RBNexusBoard::gyroX()  { return _gyro[0]; }
-float RBNexusBoard::gyroY()  { return _gyro[1]; }
-float RBNexusBoard::gyroZ()  { return _gyro[2]; }
-float RBNexusBoard::roll()   { return _angles[0]; }
-float RBNexusBoard::pitch()  { return _angles[1]; }
-float RBNexusBoard::yaw()    { return _angles[2]; }
-
 // --- CAN Bus (TWAI) Implementation ---
 bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
   if (txPin < 0 || rxPin < 0) {
@@ -621,6 +622,7 @@ bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
     return false;
   }
 
+  if (_canInitialized) canStop();
   twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT((gpio_num_t)txPin, (gpio_num_t)rxPin, TWAI_MODE_NORMAL);
   twai_timing_config_t t_config;
 
@@ -628,8 +630,8 @@ bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
     case 125000:  t_config = TWAI_TIMING_CONFIG_125KBITS(); break;
     case 250000:  t_config = TWAI_TIMING_CONFIG_250KBITS(); break;
     case 1000000: t_config = TWAI_TIMING_CONFIG_1MBITS(); break;
-    case 500000:
-    default:      t_config = TWAI_TIMING_CONFIG_500KBITS(); break;
+    case 500000: t_config = TWAI_TIMING_CONFIG_500KBITS(); break;
+    default: return false;
   }
 
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
@@ -639,6 +641,7 @@ bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
     return false;
   }
   if (twai_start() != ESP_OK) {
+    twai_driver_uninstall();
     _canInitialized = false;
     return false;
   }
@@ -647,8 +650,9 @@ bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
 }
 
 bool RBNexusBoard::canSend(uint32_t id, const uint8_t* data, uint8_t len, bool ext) {
-  if (!_canInitialized || len > 8) return false;
-  twai_message_t msg;
+  if (!_canInitialized || len > 8 || (len && !data) ||
+      id > (ext ? 0x1FFFFFFFUL : 0x7FFUL)) return false;
+  twai_message_t msg = {};
   msg.identifier = id;
   msg.extd = ext ? 1 : 0;
   msg.rtr = 0;
@@ -660,11 +664,12 @@ bool RBNexusBoard::canSend(uint32_t id, const uint8_t* data, uint8_t len, bool e
 }
 
 bool RBNexusBoard::canReceive(uint32_t& id, uint8_t* data, uint8_t& len, bool& ext) {
-  if (!_canInitialized) return false;
-  twai_message_t msg;
+  if (!_canInitialized || !data) return false;
+  twai_message_t msg = {};
   if (twai_receive(&msg, pdMS_TO_TICKS(10)) == ESP_OK) {
     id = msg.identifier;
     ext = (msg.extd == 1);
+    if (msg.rtr || msg.data_length_code > 8) return false;
     len = msg.data_length_code;
     for (uint8_t i = 0; i < len; ++i) {
       data[i] = msg.data[i];
@@ -718,4 +723,4 @@ void RBNexusBoard::feedWatchdog() {
 
 // Global instances
 RBNexusBoard RB;
-RBNexusBoard RB_Nexus;
+RBNexusBoard& RB_Nexus = RB;

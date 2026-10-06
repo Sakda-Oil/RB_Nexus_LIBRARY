@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPU6050, MPU9250 และ GY-BNO085 — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<body>  <nav class="sidebar">
+    <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
+
+    <div class="nav-section-title">เริ่มต้นใช้งาน</div>
+    <a href="index.html" class="nav-link">หน้าแรก (Home)</a>
+    <a href="installation.html" class="nav-link">การติดตั้ง (Installation)</a>
+    <a href="board_manager.html" class="nav-link">Boards Manager</a>
+
+    <div class="nav-section-title">ฮาร์ดแวร์ & ผังขา</div>
+    <a href="hardware.html" class="nav-link">สเปคฮาร์ดแวร์ (Hardware)</a>
+    <a href="pinout.html" class="nav-link">ผังขา (Pinout)</a>
+
+    <div class="nav-section-title">ซอฟต์แวร์ & API</div>
+    <a href="imu.html" class="nav-link active">MPU6050 / MPU9250 / BNO085</a>
+    <a href="api.html" class="nav-link">API Reference</a>
+    <a href="examples.html" class="nav-link">ตัวอย่างโค้ด (Examples)</a>
+
+    <div class="nav-section-title">ROS 2 & micro-ROS</div>
+    <a href="microros.html" class="nav-link">micro-ROS บน ESP32</a>
+    <a href="ros2.html" class="nav-link">ROS 2 Agent & Topics</a>
+
+    <div class="nav-section-title">การทดสอบ & แก้ปัญหา</div>
+    <a href="testing.html" class="nav-link">การทดสอบบอร์ด (Testing)</a>
+    <a href="troubleshooting.html" class="nav-link">การแก้ปัญหา (Troubleshooting)</a>
+
+    <div class="nav-section-title">สำหรับนักพัฒนา</div>
+    <a href="development.html" class="nav-link">การพัฒนาบอร์ด (Development)</a>
+    <a href="how_to_modify.html" class="nav-link">คู่มือการแก้ไข (How to Modify)</a>
+    <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
+  </nav>
+
+<main class="main-content"><header><h1>MPU6050, MPU9250 และ GY-BNO085</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<h2>การต่อ I2C</h2><table><thead><tr><th>ขาโมดูล</th><th>RB_Nexus</th></tr></thead><tbody><tr><td>SDA</td><td>GPIO 21</td></tr><tr><td>SCL</td><td>GPIO 22</td></tr><tr><td>GND</td><td>GND ร่วม</td></tr><tr><td>VCC / VIN</td><td>ใช้ไฟตามสเปกโมดูลจริง; สัญญาณ I2C และ pull-up ต้องเป็น 3.3 V</td></tr></tbody></table><p>ใช้สายสั้นและตั้ง GY-BNO085 ให้อยู่โหมด I2C ตามสกรีน/วงจรของโมดูล โมดูลจากแต่ละผู้ขายอาจมีวงจรจ่ายไฟและ jumper ต่างกัน ไดรเวอร์นี้ใช้ soft reset ผ่าน I2C จึงไม่กำหนดขา INT/RST เพิ่ม</p><table><thead><tr><th>รุ่น</th><th>Address</th><th>สิ่งที่ตรวจ</th></tr></thead><tbody><tr><td>MPU6050 (6 แกน)</td><td>0x68 / 0x69</td><td>WHO_AM_I 0x68; ตรวจการอ่านครบ 14 bytes</td></tr><tr><td>MPU9250 + AK8963</td><td>0x68 / 0x69; magnetometer 0x0C</td><td>WHO_AM_I 0x71 และ AK8963</td></tr><tr><td>GY-BNO085</td><td>0x4A / 0x4B</td><td>SH2 product handshake และเปิด sensor reports</td></tr></tbody></table><p>โหมด Auto เลือก BNO085 ก่อน MPU9250 แล้วจึง MPU6050 หากต่อทั้งสองตัว ระบบใช้หนึ่ง IMU ในแต่ละครั้งผ่าน RB ซึ่ง RB_Nexus เป็นชื่ออ้างอิง object เดียวกัน</p><div class="code-container"><pre><code>RB.imuBegin(RBIMUType::MPU6050, 0x68);
+// หรือ
+RB.imuBegin(RBIMUType::MPU9250, 0x68);
+// หรือ
+RB.imuBegin(RBIMUType::BNO085, 0x4A);</code></pre></div><h2>ตัวอย่างอ่านค่า</h2><div class="code-container"><pre><code>#include &lt;RB_Nexus.h&gt;
+
+void setup() {
+  Serial.begin(115200);
+  RB.begin();
+  // เลือก Auto, MPU6050, MPU9250 หรือ BNO085 (หนึ่งตัวทำงานในแต่ละครั้ง)
+  if (!RB.imuBegin(RBIMUType::Auto)) Serial.println(&quot;IMU not found&quot;);
+}
+void loop() {
+  RB.update();
+  static uint32_t last = 0;
+  if (millis() - last &gt;= 100) {
+    last = millis();
+    if (RB.imuDataFresh()) {
+      Serial.printf(&quot;a[m/s^2] %.3f %.3f %.3f  gyro[rad/s] %.3f %.3f %.3f\n&quot;,
+        RB.accelX(), RB.accelY(), RB.accelZ(), RB.gyroX(), RB.gyroY(), RB.gyroZ());
+    } else Serial.println(&quot;Waiting for fresh IMU data&quot;);
+  }
+}</code></pre></div><h2>หน่วยและความสดของข้อมูล</h2><ul><li>accelX/Y/Z: m/s² รวมแรงโน้มถ่วง; ขณะวางนิ่งขนาดเวกเตอร์ควรประมาณ 9.81</li><li>gyroX/Y/Z: rad/s; magX/Y/Z: µT</li><li>roll/pitch/yaw: องศา; quaternionW/X/Y/Z: ค่าจาก sensor fusion</li><li>เรียก RB.update() บ่อย ๆ หรือ imuUpdate() เพื่ออ่านข้อมูลใหม่</li><li>imuDataFresh(500) ตรวจทั้ง accel และ gyro; imuOrientationFresh(500) ตรวจ orientation แยกต่างหาก</li><li>isIMUAvailable() หมายถึงเริ่มต้นสำเร็จ ไม่ใช่การยืนยันว่าข้อมูลล่าสุดยังสด ค่า getter เป็นค่าที่ cache ไว้ จึงต้องตรวจ freshness ก่อนใช้</li></ul><h2>MPU6050: 6 แกน</h2><p>ใช้ไดรเวอร์ register ภายใน ไม่ต้องติดตั้ง Adafruit MPU6050 เพิ่ม ตั้งช่วง ±4g / ±500 deg/s, sample rate 200 Hz และอ่านเฉพาะเมื่อ data-ready ข้อมูลแปลงเป็น m/s² และ rad/s เช่นเดียวกับสองรุ่นอื่น</p><p>MPU6050 ไม่มี magnetometer และรุ่นนี้ไม่ทำ orientation fusion ให้เซนเซอร์นี้: mag, Euler และ quaternion คืน NaN; imuOrientationFresh() คืน false ใช้ accel/gyro กับ ROS raw IMU ได้ หรือเพิ่มตัวกรอง fusion บน ROS ตามงานจริง ไม่สามารถให้ yaw อ้างทิศเหนือจาก MPU6050 เพียงตัวเดียว</p><p>MPU6050 และ MPU9250 ใช้ address ชุดเดียวกัน หากต่อพร้อมกันต้องตั้ง AD0 ให้ต่างกัน และ API นี้เลือกใช้หนึ่งตัวต่อครั้ง</p><h2>การสอบเทียบและแกน</h2><p>MPU9250 ใช้ Madgwick ของ hideakitai และค่า factory trim ของ AK8963; ตั้ง magnetic declination เป็น 0 (ทิศเหนือแม่เหล็ก) ยังต้องสอบเทียบ bias/scale ตามโมดูลและการติดตั้งจริงก่อนใช้ควบคุมทิศทาง BNO085 ใช้ SH2 Rotation Vector และ calibration ภายในชิป</p><p>Euler/quaternion เป็นกรอบอ้างอิงของไดรเวอร์แต่ละรุ่น โดย MPU9250 ใช้ convention ของไลบรารี hideakitai ไม่ควรสลับรุ่นแล้วสมมติว่าแกน fusion เหมือนกัน Topic ROS ตัวอย่างจึงส่ง raw acceleration/gyro และตั้ง orientation_covariance[0] = -1; หากต้องการ orientation ใน ROS ENU ต้องแปลงแกนและการติดตั้งให้ถูกต้องก่อน</p><h2>หากอ่านไม่ได้</h2><p>ตรวจ address, ไฟเลี้ยง, I2C mode, pull-up และกราวด์ ลองบัส 100 kHz ด้วย RB.begin(100000) เมื่อพบการสื่อสารไม่เสถียร ต้องยืนยัน BNO085 I2C กับโมดูลจริงบน ESP32 ของคุณ หากข้อมูลหยุดไหลจะไม่ส่งค่าค้างออก ROS และต้องแก้การต่อสาย/เริ่ม IMU ใหม่</p><p>แหล่งอ้างอิง: <a href="https://github.com/adafruit/Adafruit_MPU6050">MPU6050 register reference</a>, <a href="https://github.com/hideakitai/MPU9250">MPU9250 driver</a>, <a href="https://github.com/adafruit/Adafruit_BNO08x">Adafruit BNO08x / SH2</a></p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+</main></body></html>

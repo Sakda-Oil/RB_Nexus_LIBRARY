@@ -8,16 +8,17 @@ rcl_allocator_t allocator;
 rcl_node_t node;
 
 void setup() {
+  Serial.begin(115200);
   RB.begin();
 
   set_microros_transports();
   allocator = rcutils_get_default_allocator();
-  rclc_support_init(&support, 0, NULL, &allocator);
-  rclc_node_init_default(&node, "rb_nexus_adc_pub", "", &support);
-  rclc_publisher_init_default(
+  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
+  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_adc_pub", "", &support));
+  rbROSCheck(rclc_publisher_init_default(
     &publisher, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    RB_TOPIC_ANALOG_CH1);
+    RB_TOPIC_ANALOG_CH1));
 }
 
 void loop() {

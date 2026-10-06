@@ -9,77 +9,49 @@
 #pragma once
 #include <Arduino.h>
 #include "RB_Nexus.h"
+#include "RB_Nexus_Safety.h"
 
-// Check if external micro_ros_arduino library is present in include path
-#if __has_include(<micro_ros_arduino.h>)
-  #include <micro_ros_arduino.h>
-  #include <stdio.h>
-  #include <rcl/rcl.h>
-  #include <rcl/error_handling.h>
-  #include <rclc/rclc.h>
-  #include <rclc/executor.h>
-  #include <std_msgs/msg/int32.h>
-  #include <std_msgs/msg/int16.h>
-  #include <std_msgs/msg/bool.h>
-  #include <std_msgs/msg/float32.h>
-  #include <std_msgs/msg/int32_multi_array.h>
-  #include <sensor_msgs/msg/imu.h>
-  #include <sensor_msgs/msg/battery_state.h>
-  #define RB_HAS_MICROROS_LIB 1
-#else
-  #define RB_HAS_MICROROS_LIB 0
+// Real micro-ROS types only: a missing dependency must never look like success.
+#include <micro_ros_arduino.h>
+#include <rcl/rcl.h>
+#include <rcl/error_handling.h>
+#include <rclc/rclc.h>
+#include <rclc/executor.h>
+#include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/int16.h>
+#include <std_msgs/msg/bool.h>
+#include <std_msgs/msg/float32.h>
+#include <std_msgs/msg/int32_multi_array.h>
+#include <sensor_msgs/msg/imu.h>
+#include <sensor_msgs/msg/battery_state.h>
+#define RB_HAS_MICROROS_LIB 1
 
-  // Fallback type definitions to ensure clean compilation without external library
-  typedef struct { int dummy; } rcl_allocator_t;
-  typedef struct { int dummy; } rcl_context_t;
-  typedef struct { rcl_context_t context; int dummy; } rclc_support_t;
-  typedef struct { int dummy; } rcl_node_t;
-  typedef struct { int dummy; } rcl_publisher_t;
-  typedef struct { int dummy; } rcl_subscription_t;
-  typedef struct { int dummy; } rcl_timer_t;
-  typedef struct { int dummy; } rclc_executor_t;
-  typedef struct { int dummy; } rosidl_message_type_support_t;
+// Stop on initialization failure. Do not print debug text on the ROS Serial port.
+inline void rbROSCheck(rcl_ret_t result) {
+  if (result == RCL_RET_OK) return;
+  RB.emergencyStop();
+  while (true) { RB.toggleLED(); delay(100); }
+}
 
-  typedef struct { int32_t data; } std_msgs__msg__Int32;
-  typedef struct { int16_t data; } std_msgs__msg__Int16;
-  typedef struct { bool data; } std_msgs__msg__Bool;
-  typedef struct { float data; } std_msgs__msg__Float32;
-  typedef struct {
-    struct { size_t size; size_t capacity; int32_t* data; } data;
-  } std_msgs__msg__Int32MultiArray;
-
-  typedef struct {
-    struct { char* data; size_t size; } frame_id;
-    struct { double x, y, z, w; } orientation;
-    struct { double x, y, z; } angular_velocity;
-    struct { double x, y, z; } linear_acceleration;
-  } sensor_msgs__msg__Imu;
-
-  typedef struct {
-    float voltage;
-    float current;
-    float charge;
-    float capacity;
-    float percentage;
-    uint8_t power_supply_status;
-  } sensor_msgs__msg__BatteryState;
-
-  inline rcl_allocator_t rcutils_get_default_allocator() { rcl_allocator_t a = {0}; return a; }
-  inline int rclc_support_init(rclc_support_t*, int, char**, rcl_allocator_t*) { return 0; }
-  inline int rclc_node_init_default(rcl_node_t*, const char*, const char*, rclc_support_t*) { return 0; }
-  #define ROSIDL_GET_MSG_TYPE_SUPPORT(pkg, subfolder, msg_name) ((const rosidl_message_type_support_t*)0)
-  inline int rclc_publisher_init_default(rcl_publisher_t*, const rcl_node_t*, const rosidl_message_type_support_t*, const char*) { return 0; }
-  inline int rclc_subscription_init_default(rcl_subscription_t*, const rcl_node_t*, const rosidl_message_type_support_t*, const char*) { return 0; }
-  inline int rcl_publish(const rcl_publisher_t*, const void*, void*) { return 0; }
-  inline int rclc_executor_init(rclc_executor_t*, void*, size_t, rcl_allocator_t*) { return 0; }
-  inline int rclc_executor_add_subscription(rclc_executor_t*, rcl_subscription_t*, void*, void (*)(const void*), int) { return 0; }
-  inline int rclc_executor_spin_some(rclc_executor_t*, uint64_t) { return 0; }
-  inline void set_microros_transports() {}
-  inline void set_microros_wifi_transports(char*, char*, IPAddress, int) {}
-  #define RCSOFTCHECK(fn) (fn)
-  #define RCCHECK(fn) (fn)
-  #define ON_NEW_DATA 0
-#endif
+inline bool rbFillImuMessage(sensor_msgs__msg__Imu& msg) {
+  if (!RB.imuDataFresh()) return false;
+  msg.linear_acceleration.x = RB.accelX();
+  msg.linear_acceleration.y = RB.accelY();
+  msg.linear_acceleration.z = RB.accelZ();
+  msg.angular_velocity.x = RB.gyroX();
+  msg.angular_velocity.y = RB.gyroY();
+  msg.angular_velocity.z = RB.gyroZ();
+  // Raw IMU topic: vendor fusion frames differ. Do not label them ROS ENU.
+  msg.orientation.w = 1;
+  msg.orientation.x = msg.orientation.y = msg.orientation.z = 0;
+  msg.orientation_covariance[0] = -1;
+  if (rmw_uros_epoch_synchronized()) {
+    int64_t ns = rmw_uros_epoch_nanos();
+    msg.header.stamp.sec = ns / 1000000000LL;
+    msg.header.stamp.nanosec = ns % 1000000000LL;
+  }
+  return true;
+}
 
 // =============================================================================
 // Standard ROS 2 Topic Names
@@ -130,13 +102,28 @@ public:
   void beginSerial(unsigned long baud = 115200) {
     _transport = RB_TRANSPORT_SERIAL;
     Serial.begin(baud);
+    rmw_uros_set_custom_transport(true, &Serial,
+      [](uxrCustomTransport*) -> bool { return true; },
+      [](uxrCustomTransport*) -> bool { return true; },
+      [](uxrCustomTransport*, const uint8_t* data, size_t len, uint8_t* err) -> size_t {
+        *err = 0; return Serial.write(data, len);
+      },
+      [](uxrCustomTransport*, uint8_t* data, size_t len, int timeout, uint8_t* err) -> size_t {
+        *err = 0; Serial.setTimeout(timeout); return Serial.readBytes(data, len);
+      });
     _state = RB_UROS_WAITING_AGENT;
   }
 
-  void beginWiFi(const char* ssid, const char* pass, IPAddress agentIP, uint16_t agentPort = 8888) {
+  bool beginWiFi(const char* ssid, const char* pass, IPAddress agentIP, uint16_t agentPort = 8888) {
     _transport = RB_TRANSPORT_WIFI_UDP;
-    RB.wifiConnect(ssid, pass);
     _state = RB_UROS_WAITING_AGENT;
+    if (!RB.wifiConnect(ssid, pass)) return false;
+    _locator.address = agentIP;
+    _locator.port = agentPort;
+    rmw_uros_set_custom_transport(false, &_locator,
+      arduino_wifi_transport_open, arduino_wifi_transport_close,
+      arduino_wifi_transport_write, arduino_wifi_transport_read);
+    return true;
   }
 
   void setSafetyStopOnDisconnect(bool enable) {
@@ -173,6 +160,7 @@ public:
   }
 
 private:
+  micro_ros_agent_locator _locator;
   RBMicroROSState     _state;
   RBMicroROSTransport _transport;
   unsigned long       _lastPingTime;
@@ -181,4 +169,4 @@ private:
   bool                _safetyStopOnDisconnect;
 };
 
-extern RBNexusMicroROS RBMicroROS;
+inline RBNexusMicroROS RBMicroROS;

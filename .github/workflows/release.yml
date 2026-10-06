@@ -18,6 +18,11 @@ jobs:
         with:
           python-version: '3.12'
       - uses: arduino/setup-arduino-cli@v2
+      - name: Test driver logic and install real dependencies
+        run: |
+          python3 scripts/test_host.py
+          python3 scripts/check_docs.py
+          python3 scripts/install_dependencies.py
       - name: Build and verify archive
         env:
           REPOSITORY: ${{ github.repository }}
@@ -38,7 +43,7 @@ jobs:
           arduino-cli core update-index --additional-urls "$index"
           version=$(cat VERSION)
           arduino-cli core install "RB_Nexus:esp32@$version" --additional-urls "$index"
-          python3 scripts/compile_examples.py
+          python3 scripts/compile_examples.py --installed-library
           arduino-cli compile --fqbn RB_Nexus:esp32:rb_nexus:FlashSize=8M,PartitionScheme=default_8MB libraries/RB_Nexus/examples/BoardInfo
       - name: Publish immutable release
         env:
@@ -51,8 +56,7 @@ jobs:
             echo "Release $tag already exists. Increase VERSION before publishing a new archive."
             exit 1
           fi
-          printf '%s\n' 'RB_Nexus ESP32-WROOM-32 board package v0.2.0.' 'Based on Arduino-ESP32 3.3.10.' 'Complete driver suite, hardware test suite, interactive QC docs, and 18 micro-ROS examples. Physical QC verified on V0.1 hardware for LED, Digital I/O, Encoders 1-4, Servos 8-15, and Motor 4.' > /tmp/release-notes.md
-          gh release create "$tag" "dist/RB_Nexus-esp32-$version.zip" dist/package_RB_Nexus_index.json --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "RB_Nexus $version" --notes-file /tmp/release-notes.md
+          gh release create "$tag" "dist/RB_Nexus-esp32-$version.zip" dist/package_RB_Nexus_index.json --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "RB_Nexus $version" --notes-file docs/RELEASE_NOTES.md
           cp dist/package_RB_Nexus_index.json package_RB_Nexus_index.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
