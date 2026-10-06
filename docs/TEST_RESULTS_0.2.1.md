@@ -24,7 +24,20 @@
   - BNO085 report freshness แยก accel/gyro และ quaternion normalization
   - BNO085 reset recovery, enable-report failure และ address validation
 
-ชุด compile ทั้ง 39 sketches + GPIO overrides 5 กรณี และการติดตั้งแพ็กเกจถูกรวมเป็น gate ก่อน release ใน GitHub Actions ดูผล workflow ของ commit รุ่นนี้บน repository; ข้อความนี้ไม่ใช่การอ้างว่าฮาร์ดแวร์ผ่าน QC แล้ว
+## ผล GitHub Actions ที่ยืนยันแล้ว
+
+ตรวจผลสำเร็จวันที่ 7 ตุลาคม 2026 สำหรับซอร์ส commit `2467fbf59c4f7632379f10f35699445db342be61`:
+
+- PASS: compile/link **44/44 builds** — ตัวอย่าง 39 sketches และ GPIO overrides 5 กรณี ไม่มี build ล้มเหลว
+- PASS: ตัวอย่าง micro-ROS ทั้ง 18 ไฟล์ใช้ไลบรารีจริง ไม่ใช้ fallback
+- PASS: BoardInfo ด้วย `FlashSize=8M,PartitionScheme=default_8MB`
+- PASS: host regressions, local HTML links, package checksum/layout/source และการติดตั้งแพ็กเกจ
+- SUCCESS: เผยแพร่ Release `v0.2.1` พร้อม archive และ Boards Manager index
+- PASS: วันที่ 7 ตุลาคม 2026 ใช้ Arduino CLI ดาวน์โหลดและติดตั้ง `RB_Nexus:esp32@0.2.1` จาก public Boards Manager URL สำเร็จ (ตรวจ checksum โดยตัวติดตั้ง); แก้ปัญหาลิงก์ไฟล์ติดตั้ง 404 ของรุ่นเดิมแล้ว
+
+หลักฐาน: [CI Verification](https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/actions/runs/37480356808), [Build and release](https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/actions/runs/37480356723), [Release 0.2.1](https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/tag/v0.2.1)
+
+ผลเหล่านี้เป็นการตรวจซอฟต์แวร์ ไม่ใช่การอ้างว่าฮาร์ดแวร์ผ่าน QC แล้ว
 
 ## การตรวจเอกสาร
 
