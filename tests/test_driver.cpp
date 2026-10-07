@@ -69,7 +69,17 @@ int main() {
   RB.pwmSetFrequency(4,1000); assert(fakeResolution[4]==10);
   puts("PASS servo frequency and repeated GPIO PWM writes");
 
+  assert(!RB.canBegin(500000,-1,16));
+  assert(!RB.canBegin(500000,17,-1));
+  assert(fakeCANInstallCount==0);
+  assert(RB.canBegin());
+  assert(fakeInstalledCAN.tx_io==17 && fakeInstalledCAN.rx_io==16);
+  assert(fakeInstalledCAN.mode==TWAI_MODE_NORMAL);
+  RB.canStop();
   assert(RB.canBegin(500000,4,5));
+  assert(fakeInstalledCAN.tx_io==4 && fakeInstalledCAN.rx_io==5);
+  assert(fakeCANInstallCount==2);
+  puts("PASS CAN schematic default pins, explicit override and missing-pin rejection");
   uint8_t data=42;
   assert(RB.canSend(0x123,&data,1));
   assert(!fakeSent.ss && !fakeSent.self && !fakeSent.dlc_non_comp);

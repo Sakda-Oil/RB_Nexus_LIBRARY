@@ -617,7 +617,7 @@ int RBNexusBoard::i2cScan(Print* out) {
 // --- CAN Bus (TWAI) Implementation ---
 bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
   if (txPin < 0 || rxPin < 0) {
-    Serial.println("[CAN] Hardware pinout UNVERIFIED on V0.1 PCB. Set valid TX/RX pins.");
+    Serial.println("[CAN] TX/RX pins must be configured with valid GPIO numbers.");
     _canInitialized = false;
     return false;
   }

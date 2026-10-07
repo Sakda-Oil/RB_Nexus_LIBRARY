@@ -95,9 +95,10 @@ void setup() {
 
   // 8. CAN Bus
   if (RB_PIN_CAN_TX == RB_PIN_UNDEFINED || RB_PIN_CAN_RX == RB_PIN_UNDEFINED) {
-    printStatus("CAN Bus (TWAI)", "NOT CONFIGURED (Pins unverified)");
+    printStatus("CAN Bus (TWAI)", "NOT CONFIGURED (Missing pin mapping)");
   } else {
-    printStatus("CAN Bus (TWAI)", "PASS");
+    Serial.printf("CAN pins: TX=GPIO%d, RX=GPIO%d\n", RB_PIN_CAN_TX, RB_PIN_CAN_RX);
+    printStatus("CAN Bus (TWAI)", "MAPPED (Physical bus test required)");
   }
 
   // 9. Motors & Servos

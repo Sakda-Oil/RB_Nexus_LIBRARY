@@ -55,6 +55,12 @@ RB.emergencyStop();   // latch จนเรียก clearEmergencyStop()
 
 เรียก RB.update() ใน loop สำหรับ PID, IMU และ software watchdog. ตัวอย่าง ROS มอเตอร์หยุดเมื่อไม่มีคำสั่ง 500 ms; ส่งคำสั่งซ้ำอย่างน้อย 10 Hz
 
+## CAN Bus
+
+ขาตามวงจร: **TX=GPIO17, RX=GPIO16** เริ่มใช้งานด้วย `RB.canBegin(500000)` สำหรับบัส 500 kbit/s หรือระบุขาของ transceiver ภายนอกด้วย `RB.canBegin(500000, txPin, rxPin)` ตัวอย่าง CANLoopback ใช้ normal mode ต้องมี CAN node อีกตัวรับและ ACK พร้อม termination ที่ปลายบัส
+
+กำหนดค่าเริ่มต้น CAN ให้ตรงวงจร (TX=GPIO17, RX=GPIO16) และให้ SelfTest แสดงว่ากำหนดขาแล้วโดยไม่อ้างว่าฮาร์ดแวร์ผ่านการทดสอบ
+
 ## การทดสอบ
 
 ```sh

@@ -160,7 +160,7 @@ public:
   float quaternionZ() const { return _quaternion[3]; }
 
   // --- CAN Bus (TWAI) ---
-  // Status: COMPILE VERIFIED / HARDWARE TRANSCEIVER PINS UNVERIFIED
+  // Board defaults: TX=GPIO17, RX=GPIO16; override for an external transceiver.
   bool canBegin(uint32_t baudRate = 500000, int txPin = RB_PIN_CAN_TX, int rxPin = RB_PIN_CAN_RX);
   bool canSend(uint32_t id, const uint8_t* data, uint8_t len, bool ext = false);
   bool canReceive(uint32_t& id, uint8_t* data, uint8_t& len, bool& ext);

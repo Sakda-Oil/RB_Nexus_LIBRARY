@@ -3,7 +3,8 @@
  * @file RB_Nexus_Pins.h
  * @brief Single Source of Truth for RB_Nexus Pin Definitions & Hardware Revisions.
  *
- * Ground truth verified from RB Nexus V0.1 hardware and QC testing.
+ * Pin mapping checked against Sheet_1 Rev 1.0 (2026-08-04), reviewed 2026-10-07.
+ * Schematic agreement does not imply a physical hardware test.
  */
 
 #pragma once
@@ -28,16 +29,16 @@
 #if (RB_NEXUS_CURRENT_REV == RB_NEXUS_REV_01)
 
 // --- Status LED ---
-constexpr int RB_PIN_LED = 2; // Active HIGH, QC Pass
+constexpr int RB_PIN_LED = 2; // Active HIGH
 
-// --- Digital I/O (QC Pass) ---
+// --- Digital I/O ---
 constexpr int RB_PIN_D4  = 4;
 constexpr int RB_PIN_D12 = 12;
 constexpr int RB_PIN_D14 = 14;
 constexpr int RB_PIN_D26 = 26;
 constexpr int RB_PIN_D27 = 27;
 
-// --- Quadrature Encoders (4 Channels, QC Pass) ---
+// --- Quadrature Encoders (4 Channels) ---
 // ENC1: Uses ESP32 input-only dedicated sensor pins
 constexpr int RB_PIN_ENC1_A = 36; // SENSOR_VP (SP)
 constexpr int RB_PIN_ENC1_B = 39; // SENSOR_VN (SN)
@@ -65,10 +66,12 @@ constexpr int RB_PIN_SPI_MISO = 19;
 constexpr int RB_PIN_SPI_CLK  = 18;
 constexpr int RB_PIN_SPI_CS   = 5;
 
-// --- CAN Bus (TWAI) - UNVERIFIED ON V0.1 PCB ---
-// Hardware connector exists, but transceiver pins are pending schematic release.
-constexpr int RB_PIN_CAN_TX = RB_PIN_UNDEFINED;
-constexpr int RB_PIN_CAN_RX = RB_PIN_UNDEFINED;
+// --- CAN Bus (TWAI) ---
+// U12 GPIO17 (header pin 28) -> U24 D (pin 1).
+// U12 GPIO16 (header pin 27) <- U24 R (pin 4).
+// Use GPIO numbers here, not the NodeMCU header pin numbers.
+constexpr int RB_PIN_CAN_TX = 17;
+constexpr int RB_PIN_CAN_RX = 16;
 
 // --- External IMU (I2C): MPU9250/MPU6050 0x68/0x69 or BNO085 0x4A/0x4B ---
 constexpr uint8_t RB_IMU_I2C_ADDR = 0x00; // Auto-probe mode
@@ -84,7 +87,7 @@ constexpr uint8_t RB_MOTOR3_CH_B = 5;
 constexpr uint8_t RB_MOTOR4_CH_A = 6;
 constexpr uint8_t RB_MOTOR4_CH_B = 7;
 
-// Servos (Channels 8 to 15, QC Pass)
+// Servos (Channels 8 to 15)
 constexpr uint8_t RB_SERVO_CH_MIN = 8;
 constexpr uint8_t RB_SERVO_CH_MAX = 15;
 constexpr uint8_t RB_SERVO_COUNT  = 8;

@@ -2,16 +2,18 @@
 
 // ตัวอย่างการใช้งาน CAN Bus (TWAI) บนบอร์ด RB_Nexus
 // หมายเหตุทางวิศวกรรม:
-//   บอร์ด V0.1 มีช่องต่อ CAN แต่ยังไม่ระบุขา TX/RX ที่ต่อกับ Transceiver บนผังวงจร
+//   ขาตามผังวงจร: TX=GPIO17, RX=GPIO16
 //   ตัวอย่างนี้แสดงการตั้งค่าและรับส่งข้อมูล CAN Bus (500 kbps)
 //   หากต่อ Transceiver ภายนอก ให้ระบุขา CAN_TX และ CAN_RX ตามที่ใช้งานจริง
 
-// กำหนดขาจำลอง หรือระบุขาจริงเมื่อทราบผังวงจร
+// ใช้ขาของบอร์ดเป็นค่าเริ่มต้น หรือ override เมื่อต่อ Transceiver ภายนอก
+// ตัวอย่างนี้ใช้ normal mode ต้องมี CAN node อีกตัวรับและ ACK พร้อม termination
+// ชื่อ CANLoopback คงไว้เพื่อความเข้ากันได้ ไม่ใช่ internal self-reception test
 #ifndef CUSTOM_CAN_TX
-#define CUSTOM_CAN_TX 5  // ตัวอย่างขาสำหรับทดสอบ
+#define CUSTOM_CAN_TX RB_PIN_CAN_TX
 #endif
 #ifndef CUSTOM_CAN_RX
-#define CUSTOM_CAN_RX 4  // ตัวอย่างขาสำหรับทดสอบ
+#define CUSTOM_CAN_RX RB_PIN_CAN_RX
 #endif
 
 void setup() {
@@ -20,13 +22,13 @@ void setup() {
 
   Serial.println("=========================================");
   Serial.println("RB_Nexus - CAN Bus (TWAI) Test");
-  Serial.println("Status: COMPILE VERIFIED / HARDWARE TRANSCEIVER PINS UNVERIFIED");
+  Serial.println("Pin mapping: schematic checked; physical CAN bus test required.");
   Serial.printf("Configuring CAN at 500 kbps (TX=%d, RX=%d)...\n", CUSTOM_CAN_TX, CUSTOM_CAN_RX);
   Serial.println("=========================================");
 
   bool ok = RB.canBegin(500000, CUSTOM_CAN_TX, CUSTOM_CAN_RX);
   if (!ok) {
-    Serial.println("CAN Controller initialization failed or pins unverified.");
+    Serial.println("CAN Controller initialization failed.");
   } else {
     Serial.println("CAN Controller started successfully.");
   }

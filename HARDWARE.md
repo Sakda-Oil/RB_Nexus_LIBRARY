@@ -13,6 +13,7 @@ Hardware information and verified peripheral pin mapping for **RB Nexus V0.1**:
 | PWM / servo outputs | 8 Channels (labelled 8-15) | Controlled via **PCA9685 I2C (Address 0x40)**:<br>**CH8 - CH15**: 50 Hz PWM Servo outputs - QC Pass |
 | Analog inputs | 8 Channels (labelled CH1-CH8) | Controlled via **MCP3208 12-bit SPI ADC**:<br>SPI: **MOSI=GPIO 23, MISO=GPIO 19, CLK=GPIO 18, CS=GPIO 5**<br>CH1 -> MCP3208 CH0<br>CH2 -> MCP3208 CH1<br>CH3 -> MCP3208 CH2<br>CH4 -> MCP3208 CH3<br>CH5 -> MCP3208 CH4<br>CH6 -> MCP3208 CH5<br>CH7 -> MCP3208 CH6<br>CH8 -> MCP3208 CH7 |
 | I2C Bus | External I2C & PCA9685 | **SDA = GPIO 21, SCL = GPIO 22** |
+| CAN Bus (TWAI) | External CAN transceiver | **TX = GPIO 17, RX = GPIO 16**; schematic checked, physical bus test required |
 
 ## Notes on Peripheral Support & Hardware QC
 
@@ -26,7 +27,7 @@ Hardware information and verified peripheral pin mapping for **RB Nexus V0.1**:
 
 - **Encoders**:
   - GPIO 34, 35, 36, 39 are input-only pins on ESP32 without internal pull-ups.
-  - Board provides appropriate pull-ups or push-pull inputs from Hall sensors.
+  - Open-collector Hall outputs require external pull-ups to 3.3 V; confirm the encoder module provides them or add them. Pull-ups are not shown for these inputs in the reviewed schematic.
   - GPIO 13, 25, 32, 33 utilize internal pull-ups in software.
 
 - **MCP3208 ADC**:
