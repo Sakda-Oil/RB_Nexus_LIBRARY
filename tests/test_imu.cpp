@@ -52,5 +52,13 @@ int main() {
   assert(!RB.imuOrientationFresh() && isnan(RB.magX()) && isnan(RB.yaw()));
   fakeNow+=501; Wire.shortRead=0;
   assert(!RB.imuUpdate() && !RB.imuDataFresh());
-  puts("PASS MPU6050 auto detection, ranges, signed SI conversion and failed reads");
+  Wire.shortRead = -1;
+  Wire.registers[0x75]=0x70; // MPU-6500 clone
+  assert(RB.imuBegin(RBIMUType::Auto));
+  assert(RB.imuType()==RBIMUType::MPU6050);
+  assert(std::string(RB.imuModelName()) == "MPU6500 (6-axis)");
+  assert(RB.imuBegin(RBIMUType::MPU9250)); // fallback when labeled MPU9250 but chip is MPU6500
+  assert(RB.imuType()==RBIMUType::MPU6050);
+
+  puts("PASS MPU6050 and MPU6500 auto detection, ranges, signed SI conversion and failed reads");
 }

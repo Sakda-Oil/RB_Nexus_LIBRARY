@@ -34,8 +34,13 @@ bool writeIMURegister(uint8_t address, uint8_t reg, uint8_t value) {
   return Wire.endTransmission() == 0;
 }
 
+bool is6AxisMPUIdentity(uint8_t id) {
+  return id == 0x68 || id == 0x70 || id == 0x72 || id == 0x73;
+}
+
 bool setupMPU6050(uint8_t address) {
-  if (!hasIdentity(address, 0x68)) return false;
+  uint8_t identity = 0;
+  if (!readIMURegisters(address, 0x75, &identity, 1) || !is6AxisMPUIdentity(identity)) return false;
   if (!writeIMURegister(address, 0x6B, 0x80)) return false;
   delay(100);
   // PLL X gyro, all axes enabled, DLPF ~42/44 Hz, 200 Hz sampling.
@@ -99,13 +104,21 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
       return true;
     }
   }
-  if (type == RBIMUType::Auto || type == RBIMUType::MPU6050) {
+  if (type == RBIMUType::Auto || type == RBIMUType::MPU6050 || type == RBIMUType::MPU9250) {
     for (uint8_t addr : {uint8_t(0x68), uint8_t(0x69)}) {
       if (address && address != addr) continue;
       if (!setupMPU6050(addr)) continue;
       _imuDetected = true;
       _imuType = RBIMUType::MPU6050;
-      _imuModel = "MPU6050 (6-axis)";
+      uint8_t id = 0;
+      readIMURegisters(addr, 0x75, &id, 1);
+      if (id == 0x70) {
+        _imuModel = "MPU6500 (6-axis)";
+      } else if (id == 0x73) {
+        _imuModel = "MPU9255 (6-axis)";
+      } else {
+        _imuModel = "MPU6050 (6-axis)";
+      }
       _imuAddress = addr;
       return true;
     }
