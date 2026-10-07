@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>คู่มือการแก้ไข — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
+<title>สอนแก้โค้ดด้วยตัวเอง — RB_Nexus</title><link rel="stylesheet" href="style.css?v=guide-20261007"><script src="script.js?v=0.2.1" defer></script></head>
 <body>  <nav class="sidebar">
     <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
 
@@ -32,6 +32,98 @@
     <a href="release.html" class="nav-link">การ Release แพ็กเกจ</a>
   </nav>
 
-<main class="main-content"><header><h1>คู่มือการแก้ไข</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
-<ol><li>แก้ RB_Nexus_Pins.h เฉพาะเมื่อมี schematic ยืนยัน</li><li>แยกการหยุดมอเตอร์ระดับ API ออกจากการเขียนเอาต์พุตภายใน PID</li><li>หากเพิ่ม IMU ให้ตรวจ chip identity, หน่วย, เวลา sample และ reset recovery</li><li>อัปเดตตัวอย่างและคู่มือให้ตรงกับ signature ใน header</li><li>รัน regression tests และ compile ด้วย dependency จริงก่อน push</li></ol><p>ห้ามใช้โค้ด dummy เพื่อทำให้ compile ผ่านแล้วระบุว่าทำงานจริง หากยังไม่รองรับให้รายงานข้อจำกัดอย่างชัดเจน</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
+<main class="main-content">
+<header><h1>สอนแก้โค้ด RB_Nexus ด้วยตัวเอง</h1><p>คู่มือภาษาไทยสำหรับผู้ดูแล RB_Nexus · ปรับปรุง 7 ตุลาคม 2026</p>
+<p>อ้างอิงโครงสร้างซอร์สรุ่น 0.2.1 · ใช้ Windows PowerShell · ตัวอย่างรุ่นถัดไป 0.2.2</p>
+<button class="guide-print" type="button" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></header>
+<div class="alert alert-info"><strong>เป้าหมาย:</strong> แก้โปรเจกต์ของคุณเองได้อย่างเป็นขั้นตอน รู้ว่าต้องแก้ไฟล์ไหน ทดสอบอย่างไร และส่งขึ้น GitHub เมื่อพร้อม คู่มือนี้ไม่ได้เปลี่ยนซอฟต์แวร์เป็น 0.2.2 ให้แล้ว เลข 0.2.2 เป็นเพียงตัวอย่างสำหรับการออกรุ่นครั้งต่อไป</div>
+<nav class="guide-toc" aria-label="สารบัญคู่มือ"><strong>สารบัญ</strong><p><a href="#terms">คำพื้นฐาน</a> · <a href="#files">แผนที่ไฟล์</a> · <a href="#prepare">เตรียมงาน</a> · <a href="#tools">เครื่องมือ</a> · <a href="#edit">ฝึกแก้ตัวอย่าง</a> · <a href="#driver">แก้ไดรเวอร์</a> · <a href="#test">ทดสอบ</a> · <a href="#upload">อัปโหลดบอร์ด</a> · <a href="#docs">แก้คู่มือ</a> · <a href="#publish">ส่งขึ้น GitHub</a> · <a href="#recovery">แก้ปัญหา</a></p></nav><section id="terms"><h2>1. รู้จักคำที่ต้องใช้</h2>
+<table><thead><tr><th>คำ</th><th>ความหมายในโปรเจกต์นี้</th></tr></thead><tbody><tr><td>Repository</td><td>โฟลเดอร์โปรเจกต์ที่เก็บโค้ด คู่มือ และประวัติการแก้ไข</td></tr><tr><td>Commit</td><td>จุดบันทึกการเปลี่ยนแปลงในเครื่อง ยังไม่ขึ้น GitHub จนกว่าจะ push</td></tr><tr><td>Branch</td><td>สายงานแยกสำหรับลองแก้ ก่อนนำมารวมใน main</td></tr><tr><td>Pull request / Merge</td><td>ขอรวม branch เข้า main และตรวจผล CI ก่อนรวม</td></tr><tr><td>CI</td><td>ระบบอัตโนมัติที่ทดสอบและคอมไพล์โค้ดบน GitHub</td></tr><tr><td>Release / Tag</td><td>ชุดไฟล์ที่เผยแพร่ให้ติดตั้ง เช่นรุ่น 0.2.2 ใช้ tag v0.2.2</td></tr><tr><td>Boards Manager index</td><td>ไฟล์ JSON บอก Arduino ว่าต้องดาวน์โหลด archive ใด ขนาดเท่าไร และ checksum อะไร</td></tr></tbody></table></section>
+<section id="files"><h2>2. ต้องแก้ไฟล์ไหน</h2>
+<table><thead><tr><th>สิ่งที่อยากเปลี่ยน</th><th>ไฟล์ที่เกี่ยวข้อง</th></tr></thead><tbody><tr><td>เลือก IMU หรือปรับตัวอย่าง</td><td><code>libraries/RB_Nexus/examples/IMURaw/IMURaw.ino</code> หรือ sketch ของคุณ</td></tr><tr><td>เพิ่ม/เปลี่ยน API ที่ผู้ใช้เรียก</td><td><code>libraries/RB_Nexus/src/RB_Nexus.h</code></td></tr><tr><td>มอเตอร์, PID, Servo, ADC, Encoder, CAN</td><td><code>libraries/RB_Nexus/src/RB_Nexus.cpp</code></td></tr><tr><td>MPU6050 / MPU9250 / BNO085</td><td><code>libraries/RB_Nexus/src/RB_Nexus_IMU.cpp</code></td></tr><tr><td>ผังขาของบอร์ด</td><td><code>libraries/RB_Nexus/src/RB_Nexus_Pins.h</code> — ต้องมีวงจรจริงยืนยัน</td></tr><tr><td>ROS, transport, การสร้าง message</td><td><code>libraries/RB_Nexus/src/RB_Nexus_MicroROS.h</code> และ <code>examples/micro_ros/</code></td></tr><tr><td>timeout ของคำสั่งมอเตอร์</td><td><code>libraries/RB_Nexus/src/RB_Nexus_Safety.h</code> และค่าที่ส่งให้ RBMotorCommandGuard ใน sketch</td></tr><tr><td>เลขเวอร์ชัน</td><td><code>VERSION</code>, <code>library.properties</code>, <code>RBNexus::version</code> — <a href="release.html#version-files">ดูตัวอย่างครบ 3 จุด</a></td></tr><tr><td>คู่มือและหน้าตาเว็บ</td><td><code>docs/html/*.html</code>, <code>style.css</code>, <code>script.js</code></td></tr><tr><td>การสร้างแพ็กเกจ / CI</td><td><code>scripts/</code>, <code>.github/workflows/</code></td></tr><tr><td>ทดสอบ logic โดยไม่ต่อบอร์ด</td><td><code>tests/test_driver.cpp</code>, <code>tests/test_imu.cpp</code>, <code>tests/fakes/</code></td></tr></tbody></table><p>ให้แก้ซอร์สใน repository นี้ อย่าแก้เฉพาะสำเนาที่อยู่ใน Arduino15 หรือโฟลเดอร์แพ็กเกจที่ติดตั้ง เพราะการอัปเดตบอร์ดครั้งต่อไปอาจแทนที่ไฟล์นั้น และการแก้จะไม่อยู่ใน Git</p></section>
+<section id="prepare"><h2>3. เริ่มจากสำเนาล่าสุดและสร้าง branch</h2>
+<p>เปิด PowerShell ที่โฟลเดอร์โปรเจกต์ หากใช้อีกเครื่องให้ clone repository ก่อน เครื่องปัจจุบันมีโปรเจกต์อยู่แล้วจึงไม่ต้อง clone ซ้ำ</p><div class="code-container"><pre><code class="language-powershell"># เฉพาะเครื่องใหม่: เปลี่ยนโฟลเดอร์ปลายทางตามที่ต้องการ
+git clone https://github.com/Sakda-Oil/RB_Nexus_LIBRARY.git RB_Nexus
+Set-Location RB_Nexus</code></pre></div>
+<div class="code-container"><pre><code class="language-powershell"># เครื่องปัจจุบัน
+Set-Location &#x27;D:\Desktop\Redbrick\RB_Nexus&#x27;
+git status --short
+# ถ้ามีรายการไฟล์ ให้ตรวจและบันทึกงานเดิมก่อนเปลี่ยน branch
+git switch main
+git pull --ff-only origin main
+git switch -c update/0.2.2</code></pre></div>
+<p>เมื่อ git status ไม่แสดงรายการ หมายถึงไม่มีงานค้าง เลือกชื่อ branch ใหม่หาก update/0.2.2 มีอยู่แล้ว ถ้า pull บอกว่าประวัติ diverged ให้ตรวจประวัติก่อน ห้ามใช้ force push เพื่อแก้โดยเดา</p><p>ใช้ตัวแก้ไขข้อความที่บันทึก UTF-8 เช่น VS Code แล้วเปิดโฟลเดอร์ RB_Nexus ทั้งโฟลเดอร์ จะค้นหา API และดูไฟล์ที่แก้ได้ง่าย</p></section>
+<section id="tools"><h2>4. เตรียมเครื่องมือให้ใช้โค้ดชุดเดียวกัน</h2>
+<p><strong>เครื่องปัจจุบัน:</strong> มี Arduino CLI แบบพกพาและ config อยู่ใน .cache แล้ว กำหนดสองตัวแปรนี้ใน PowerShell ทุกหน้าต่างที่จะใช้คำสั่งต่อไป</p><div class="code-container"><pre><code class="language-powershell">$rbCli = (Resolve-Path &#x27;.cache/tools/arduino-cli.exe&#x27;).Path
+$rbConfig = (Resolve-Path &#x27;.cache/arduino-cli.yaml&#x27;).Path
+&amp; $rbCli version
+&amp; $rbCli --config-file $rbConfig core list
+python --version</code></pre></div>
+<p><strong>เครื่องใหม่:</strong> ติดตั้ง Git และ Python 3 แล้วดาวน์โหลด Windows ZIP ของ <a href="https://arduino.github.io/arduino-cli/1.5/installation/">Arduino CLI จากผู้พัฒนา</a> แตกไฟล์ให้ได้ .cache/tools/arduino-cli.exe ก่อน .cache ไม่อยู่ใน Git จึงไม่มากับการ clone และ config เดิมมี absolute path จึงไม่ควรคัดลอกข้ามเครื่องโดยไม่แก้ path</p><div class="code-container"><pre><code class="language-powershell"># เฉพาะเครื่องใหม่ที่ยังไม่มี config นี้
+New-Item -ItemType Directory -Force .cache | Out-Null
+$rbCli = (Resolve-Path &#x27;.cache/tools/arduino-cli.exe&#x27;).Path
+$rbConfig = Join-Path (Get-Location).Path &#x27;.cache/arduino-cli.yaml&#x27;
+if (-not (Test-Path -LiteralPath $rbConfig)) {
+  &amp; $rbCli config init --dest-dir .cache
+  &amp; $rbCli --config-file $rbConfig config set directories.data (Join-Path (Get-Location).Path &#x27;.cache/arduino/data&#x27;)
+  &amp; $rbCli --config-file $rbConfig config set directories.downloads (Join-Path (Get-Location).Path &#x27;.cache/arduino/downloads&#x27;)
+  &amp; $rbCli --config-file $rbConfig config set directories.user (Join-Path (Get-Location).Path &#x27;.cache/arduino/user&#x27;)
+}
+$rbIndex = &#x27;https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nexus_index.json&#x27;
+&amp; $rbCli --config-file $rbConfig core update-index --additional-urls $rbIndex
+&amp; $rbCli --config-file $rbConfig core install RB_Nexus:esp32@0.2.1 --additional-urls $rbIndex
+python -X utf8 scripts/install_dependencies.py --cli $rbCli --config-file $rbConfig</code></pre></div>
+<p>เปลี่ยน 0.2.1 เป็นรุ่นที่เผยแพร่แล้วหากเริ่มในอนาคต การติดตั้งนี้ใช้พื้นที่ .cache ของโปรเจกต์ แยกจาก Arduino IDE ปกติ เมื่อ CLI แจ้ง error ให้หยุดแก้ก่อนสั่งขั้นถัดไป ตรวจรหัสออกล่าสุดด้วย <code>$LASTEXITCODE</code> ซึ่งควรเป็น 0</p><p>dependency ที่ทดสอบใน 0.2.1 คือ MPU9250 0.4.8, Adafruit BNO08x 1.2.7 และ micro_ros_arduino Jazzy snapshot ที่ระบุใน scripts/install_dependencies.py ส่วน MPU6050 ใช้ register driver ภายใน</p></section>
+<section id="edit"><h2>5. บทฝึก: เปลี่ยน IMU โดยไม่แก้ไดรเวอร์</h2>
+<p>เปิด IMURaw.ino ค้นหาบรรทัด RB.imuBegin(RBIMUType::Auto) แล้วเลือกเพียงหนึ่งรูปแบบตามโมดูลที่ต่อ:</p><div class="code-container"><pre><code class="language-cpp">RB.imuBegin(RBIMUType::MPU6050, 0x68);
+// หรือ
+RB.imuBegin(RBIMUType::MPU9250, 0x68);
+// หรือ
+RB.imuBegin(RBIMUType::BNO085, 0x4A);</code></pre></div>
+<p>หาก AD0 เปลี่ยน address ของ MPU ให้ใช้ 0x69 ส่วน BNO085 อาจเป็น 0x4B ตรวจจากโมดูลจริง เลือก Auto เมื่อต้องการค้นหา BNO085 → MPU9250 → MPU6050 ใช้หนึ่ง IMU ต่อครั้ง</p><p>คง Serial.begin(115200), RB.begin() และ RB.update() ไว้ ตรวจ imuDataFresh() ก่อนอ่านค่า อ่าน <a href="imu.html">คู่มือ IMU</a> สำหรับหน่วยและข้อจำกัด MPU6050 ไม่มี magnetometer และรุ่นนี้ไม่ได้ทำ orientation fusion</p><p><strong>คู่มือและโค้ดต้องตรงกัน:</strong> ถ้าแก้ IMURaw ตัวที่อยู่ใน repository ให้แก้ code block แรกของ README.md และตัวอย่างใน docs/html/imu.html ตามด้วย check_docs.py ตรวจว่า README ตรงกับ sketch ถ้าเป็นการทดลองส่วนตัว ให้ใช้สำเนา sketch แยกจากตัวอย่างหลัก</p><h3>อีกตัวอย่าง: ปรับมอเตอร์ใน sketch</h3><div class="code-container"><pre><code class="language-cpp">RB.encoderBegin();
+RB.encoderSetPPR(4, 330); // ต้องเป็นจำนวน ticks ที่นับจริงต่อรอบล้อ
+RB.motorSetPID(4, 1.2f, 0.5f, 0.05f);
+RB.motorSetRPM(4, 60);  // เป้าหมาย 60 RPM
+// ใน loop ต้องเรียก RB.update();
+// เมื่อต้องการหยุด:
+RB.motorStop(4);</code></pre></div>
+<p>ปรับจากเป้าหมายต่ำและทดสอบโดยยกล้อพ้นพื้น motorStop() จะหยุดและปิด PID ส่วน motorSet() เป็น open-loop ช่วง -255..255 และปิด PID ของช่องนั้น</p></section>
+<section id="driver"><h2>6. ถ้าต้องแก้ไดรเวอร์หรือเพิ่ม API</h2>
+<ol><li>เขียนพฤติกรรมที่ต้องการก่อน เช่น “อ่าน I2C ไม่ครบต้องไม่ทำเครื่องหมายข้อมูลว่าสด”</li><li>ถ้าเพิ่มฟังก์ชันสาธารณะ ให้เพิ่ม declaration ใน RB_Nexus.h และ implementation ใน .cpp ที่เกี่ยวข้อง โดยชื่อ ชนิดข้อมูล และพารามิเตอร์ต้องตรงกัน</li><li>ถ้าเพิ่ม IMU ให้เพิ่ม enum, ตรวจ WHO_AM_I/handshake, ตั้งค่า range, แปลงหน่วย และจัดการข้อมูลเก่า/การรีเซ็ต</li><li>เพิ่มกรณีทดสอบใน tests/test_imu.cpp หรือ tests/test_driver.cpp ให้ตรวจพฤติกรรมที่เปลี่ยนและเงื่อนไขผิดพลาด</li><li>แก้ตัวอย่าง API reference และ release notes ตามผลจริง</li></ol><p>สำหรับมอเตอร์ ให้ API หยุดปิด PID ด้วย ส่วน updatePID() ต้องเรียกฟังก์ชันเขียนเอาต์พุตภายในที่ไม่ปิด PID เอง โค้ดปัจจุบันแยก motorStop/motorSet ออกจาก motorOutputStop/motorOutputSet ไว้แล้ว</p><p>การเปลี่ยนเซนเซอร์หรือแก้ logic ไม่จำเป็นต้องเปลี่ยน metadata/upstream.json ซึ่งกำหนด ESP32 core/toolchain การอัปเกรด core เป็นงานอีกส่วนและต้องทดสอบ compatibility ใหม่</p></section>
+<section id="test"><h2>7. ทดสอบตามขนาดของงาน</h2>
+<h3>7.1 คู่มือและ syntax Python</h3><div class="code-container"><pre><code class="language-powershell">python -X utf8 scripts/check_docs.py
+python -X utf8 -m compileall -q scripts
+git diff --check</code></pre></div>
+<h3>7.2 Logic โดยไม่ต่อบอร์ด</h3><p>เครื่องนี้มี Zig แบบพกพาแล้ว ใช้:</p><div class="code-container"><pre><code class="language-powershell">python -X utf8 scripts/test_host.py --zig .cache/tools/zig-windows-x86_64-0.13.0/zig.exe</code></pre></div>
+<p>เครื่องใหม่ที่ไม่มี Zig ให้ใช้ g++/clang++ ซึ่งอยู่ใน PATH แล้วสั่ง python scripts/test_host.py หรือใช้ --compiler ระบุไฟล์ compiler; GitHub CI ใช้ g++ บน Linux การทดสอบ fake hardware ตรวจ logic ไม่ยืนยันการทำงานของวงจรจริง</p><h3>7.3 คอมไพล์เฉพาะตัวอย่างที่แก้</h3><div class="code-container"><pre><code class="language-powershell">python -X utf8 scripts/compile_examples.py --cli $rbCli --config-file $rbConfig --filter IMURaw
+# ตัวอย่าง ROS รวมระบบ
+python -X utf8 scripts/compile_examples.py --cli $rbCli --config-file $rbConfig --filter 15_AllSensors</code></pre></div>
+<h3>7.4 ก่อนออกรุ่น: ตรวจทุกตัวอย่าง</h3><div class="code-container"><pre><code class="language-powershell">python -X utf8 scripts/compile_examples.py --cli $rbCli --config-file $rbConfig</code></pre></div>
+<p>รุ่น 0.2.1 มี 39 sketches + GPIO overrides 5 กรณี รวม 44 builds ถ้าเพิ่มตัวอย่างจำนวนอาจมากขึ้น เกณฑ์คือ Failed: 0 และจำนวนที่ค้นพบต้องครบ ชุดเต็มอาจใช้เวลาหลายสิบนาที</p><p>ค่าเริ่มต้นของสคริปต์ใช้ --library ชี้ไลบรารีใน checkout จึงตรวจซอร์สที่คุณแก้ หากใช้ --installed-library จะตรวจสำเนาในแพ็กเกจที่ติดตั้งแทน ใช้แบบหลังเมื่อทดสอบแพ็กเกจรุ่นใหม่ที่ build แล้ว</p></section>
+<section id="upload"><h2>8. อัปโหลดซอร์สที่แก้ลงบอร์ดจริง</h2>
+<p>ตรวจพอร์ตด้วย board list แล้วแทน COM5 ด้วยพอร์ตจริง คำสั่ง compile ด้านล่างสร้าง binary จาก checkout และ upload จาก build directory เดียวกัน:</p><div class="code-container"><pre><code class="language-powershell">&amp; $rbCli --config-file $rbConfig board list
+&amp; $rbCli --config-file $rbConfig compile --fqbn RB_Nexus:esp32:rb_nexus --library libraries/RB_Nexus --build-path .cache/manual-imu-build libraries/RB_Nexus/examples/IMURaw
+# ทำต่อเมื่อ compile สำเร็จเท่านั้น
+&amp; $rbCli --config-file $rbConfig upload --fqbn RB_Nexus:esp32:rb_nexus --port COM5 --input-dir .cache/manual-imu-build
+&amp; $rbCli --config-file $rbConfig monitor --port COM5 --config baudrate=115200</code></pre></div>
+<p>ปิด Serial Monitor อื่นก่อนเปิดพอร์ต ใช้ Ctrl+C เพื่อออกจาก monitor ทดสอบวาง IMU นิ่ง หมุนทีละแกน ถอดการเชื่อมต่อ และตรวจ freshness ตัวอย่าง ROS Serial ใช้พอร์ตกับ Agent ห้ามเปิด monitor พร้อมกันหรือพิมพ์ debug แทรกลง transport เดียวกัน</p><p>หากใช้ Arduino IDE ปกติ ให้ติดตั้ง dependencies ใน Library Manager ของ IDE ด้วย เพราะ IDE ไม่ใช้ .cache profile นี้อัตโนมัติ หลังออกรุ่นแล้วสามารถอัปเดตผ่าน Boards Manager ได้ตามปกติ</p></section>
+<section id="docs"><h2>9. แก้คู่มือให้ตามโค้ดทัน</h2>
+<ol><li>แก้ docs/html/api.html เมื่อชื่อ API/พารามิเตอร์เปลี่ยน</li><li>แก้ docs/html/imu.html เมื่อเพิ่มเซนเซอร์ เปลี่ยนหน่วย หรือ address</li><li>แก้ installation.html และ microros.html เมื่อ dependency เปลี่ยน</li><li>บันทึกผลที่ตรวจจริงใน docs/TEST_RESULTS_เลขรุ่น.md แยก compile, logic test และ hardware test</li><li>เปิด HTML ในเบราว์เซอร์จากไฟล์โดยตรง ตรวจจอแคบและปุ่ม Copy แล้วรัน check_docs.py</li></ol><p>ปุ่ม “พิมพ์ / บันทึกเป็น PDF” ด้านบนใช้พิมพ์คู่มือนี้ได้ ไม่ต้องมีเว็บเซิร์ฟเวอร์ อ่านขั้นตอนเปลี่ยนเวอร์ชันต่อที่ <a href="release.html">คู่มือออกรุ่น</a></p></section>
+<section id="publish"><h2>10. บันทึกและส่งงานให้ตรวจบน GitHub</h2>
+<p>เมื่อเตรียมเลขรุ่นตามหน้าถัดไปแล้ว ให้ดูความเปลี่ยนแปลงก่อน commit อย่าใส่รหัส Wi-Fi จริงหรือข้อมูลลับในตัวอย่างที่จะส่งขึ้น GitHub:</p><div class="code-container"><pre><code class="language-powershell">git diff --stat
+git diff
+git status --short
+git add libraries docs scripts tests README.md VERSION
+# ถ้าแก้ workflow หรือไฟล์อื่น ให้ add เฉพาะไฟล์นั้นเพิ่มด้วย
+git diff --cached --stat
+git diff --cached --check
+git commit -m &quot;Prepare RB_Nexus 0.2.2: describe the change&quot;
+git push -u origin update/0.2.2</code></pre></div>
+<p>เปิด repository บน GitHub → Compare &amp; pull request → เลือก base: main และ compare: update/0.2.2 → อธิบายสิ่งที่เปลี่ยนและผลทดสอบ → Create pull request รอ CI Verification ผ่านก่อน Merge</p><p>workflow ปัจจุบันไม่รัน CI เพียงเพราะ push feature branch แต่จะรันเมื่อเปิด/อัปเดต pull request เข้า main และจะเริ่ม Build and release เมื่อ merge เข้า main ดูวิธีตรวจไฟล์ติดตั้งใน <a href="release.html#verify-release">ขั้นตอนหลังเผยแพร่</a></p></section>
+<section id="recovery"><h2>11. ปัญหาที่พบบ่อย</h2>
+<table><thead><tr><th>อาการ</th><th>แนวทางแก้</th></tr></thead><tbody><tr><td>Arduino CLI not found</td><td>ตรวจ .cache/tools/arduino-cli.exe และกำหนด $rbCli ใหม่ใน PowerShell หน้าต่างนั้น</td></tr><tr><td>Python อ่านภาษาไทยไม่ได้</td><td>ใช้ python -X utf8 และบันทึกไฟล์ UTF-8</td></tr><tr><td>missing MPU9250.h / Adafruit_BNO08x.h</td><td>รัน install_dependencies.py ด้วย --cli และ --config-file ชุดเดียวกับตอน compile</td></tr><tr><td>missing micro_ros_arduino.h</td><td>ติดตั้ง Jazzy snapshot ด้วยสคริปต์ dependency; ไม่เพิ่ม dummy types เพื่อหลบ error</td></tr><tr><td>คอมไพล์ผ่านแต่เหมือนโค้ดเก่า</td><td>ตรวจ --library ว่าชี้ checkout; อัปโหลด binary ที่เพิ่งสร้าง อย่าเลือก --installed-library ก่อนติดตั้งแพ็กเกจใหม่</td></tr><tr><td>check_docs.py บอก README sketch parity</td><td>คัดลอกตัวอย่าง IMURaw ฉบับเต็มไปใส่ code block C++ แรกใน README ให้ตรงกัน</td></tr><tr><td>คำสั่ง upload หา COM ไม่เจอ</td><td>ตรวจ board list, สาย USB data, driver CH340 และปิดโปรแกรมที่เปิดพอร์ตค้าง</td></tr><tr><td>push rejected / non-fast-forward</td><td>git fetch origin แล้วตรวจ branch/ประวัติ อย่า force push ทับงานใหม่</td></tr><tr><td>ต้องการเปรียบเทียบกับรุ่นเก่า</td><td>ใช้ git diff v0.2.1 -- libraries/RB_Nexus/src เพื่อดูความต่าง โดยไม่ลบงานปัจจุบัน</td></tr></tbody></table></section>
+<section id="references"><h2>แหล่งอ้างอิง</h2>
+<p>คู่มือนี้อิงไฟล์ .github/workflows/ci.yml, release.yml และ scripts/ ใน repository ณ รุ่น 0.2.1 หากคุณแก้ workflow ภายหลังให้ทบทวนขั้นตอนด้วย</p><p><a href="https://arduino.github.io/arduino-cli/1.5/installation/">Arduino CLI installation</a> · <a href="https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs">GitHub: skipping workflow runs</a> · <a href="https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository">GitHub: managing releases</a></p></section>
+
+<footer><p>© 2026 Redbrick Robotics · <a href="how_to_modify.html">สอนแก้โค้ด</a> · <a href="release.html">เปลี่ยนเวอร์ชันและออก Release</a> · <a href="../MAINTENANCE_QUICKSTART_TH.md">เช็กลิสต์ฉบับย่อ</a></p></footer>
 </main></body></html>
