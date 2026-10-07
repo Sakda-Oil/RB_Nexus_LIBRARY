@@ -11,12 +11,12 @@
         {
           "name": "RB_Nexus",
           "architecture": "esp32",
-          "version": "0.2.1",
+          "version": "0.2.2",
           "category": "Contributed",
-          "url": "https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/download/v0.2.1/RB_Nexus-esp32-0.2.1.zip",
-          "archiveFileName": "RB_Nexus-esp32-0.2.1.zip",
-          "checksum": "SHA-256:9afb722bdf96c47519ab6b2ac0ff246eccf7879f7e7727bd1126e2351db8d3b9",
-          "size": "68402028",
+          "url": "https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/download/v0.2.2/RB_Nexus-esp32-0.2.2.zip",
+          "archiveFileName": "RB_Nexus-esp32-0.2.2.zip",
+          "checksum": "SHA-256:bb2ff46cd5a65c86f075891bc51ddefa2f1e8f9492b6bc84e710584a88b0dd9e",
+          "size": "68413183",
           "boards": [
             {
               "name": "RB_Nexus"
@@ -57,6 +57,24 @@
               "packager": "RB_Nexus",
               "name": "xtensa-esp-elf-gdb",
               "version": "16.3_20250913"
+            }
+          ],
+          "libraryDependencies": [
+            {
+              "name": "MPU9250",
+              "version": "0.4.8"
+            },
+            {
+              "name": "Adafruit BNO08x",
+              "version": "1.2.7"
+            },
+            {
+              "name": "Adafruit BusIO",
+              "version": "1.17.4"
+            },
+            {
+              "name": "Adafruit Unified Sensor",
+              "version": "1.1.15"
             }
           ],
           "help": {
