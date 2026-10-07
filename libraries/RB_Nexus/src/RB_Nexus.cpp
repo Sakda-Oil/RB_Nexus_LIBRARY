@@ -603,7 +603,7 @@ int RBNexusBoard::i2cScan(Print* out) {
       if (out) {
         out->printf("  - Found device at 0x%02X", addr);
         if (addr == RB_PCA9685_ADDR) out->print(" (PCA9685 PWM Controller)");
-        else if (addr == 0x68 || addr == 0x69) out->print(" (Possible MPU9250; identity not verified)");
+        else if (addr == 0x68 || addr == 0x69) out->print(" (Possible MPU family; read WHO_AM_I at register 0x75)");
         else if (addr == 0x4A || addr == 0x4B) out->print(" (Possible BNO085; identity not verified)");
         out->println();
       }

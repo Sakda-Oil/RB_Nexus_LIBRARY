@@ -16,11 +16,11 @@
 
 namespace RBNexus {
 constexpr const char* name = "RB_Nexus";
-constexpr const char* version = "0.2.1";
+constexpr const char* version = "0.2.2";
 constexpr bool peripheralPinMapAvailable = true;
 }
 
-enum class RBIMUType : uint8_t { Auto, MPU9250, BNO085, MPU6050 };
+enum class RBIMUType : uint8_t { Auto, MPU9250, BNO085, MPU6050, MPU6500 };
 
 // PID Controller configuration structure
 struct RBPIDConfig {
@@ -132,7 +132,7 @@ public:
   bool i2cBegin(uint32_t freq = 400000);
   int  i2cScan(Print* out = &Serial);
 
-  // I2C: MPU9250/MPU6050 0x68/0x69; BNO085 0x4A/0x4B. One active IMU.
+  // I2C: MPU9250/MPU6050/MPU6500 0x68/0x69; BNO085 0x4A/0x4B. One active IMU.
   bool  imuBegin(RBIMUType type = RBIMUType::Auto, uint8_t address = 0);
   bool  imuUpdate(); // Also called by update(); true when a sensor report arrives.
   bool  imuDataFresh(uint32_t maxAgeMs = 500) const;
@@ -154,6 +154,11 @@ public:
   float roll();
   float pitch();
   float yaw();
+  // Relative rotation about the sensor's Z axis, accumulated gyro degrees (not compass heading).
+  float imuRotationZ() const;
+  bool imuRotationZFresh(uint32_t maxAgeMs = 500) const;
+  bool imuResetRotationZ(float degrees = 0.0f);
+  bool imuSetGyroZBias(float radiansPerSecond); // Measure while stationary.
   float quaternionW() const { return _quaternion[0]; }
   float quaternionX() const { return _quaternion[1]; }
   float quaternionY() const { return _quaternion[2]; }
@@ -226,6 +231,10 @@ private:
   uint32_t _imuAccelTime = 0, _imuGyroTime = 0, _imuOrientationTime = 0;
   float _mag[3] = {};
   float _quaternion[4] = {1, 0, 0, 0};
+  float _rotationZ = 0, _gyroZBias = 0, _previousGyroZ = 0;
+  uint32_t _rotationZSampleUs = 0, _rotationZReceiveMs = 0;
+  bool _rotationZPrimed = false;
+  void updateRotationZ(float radiansPerSecond, uint32_t sampleUs);
 
   uint8_t readRegister8(uint8_t reg);
   void writeRegister8(uint8_t reg, uint8_t value);

@@ -73,7 +73,7 @@ constexpr int RB_PIN_SPI_CS   = 5;
 constexpr int RB_PIN_CAN_TX = 17;
 constexpr int RB_PIN_CAN_RX = 16;
 
-// --- External IMU (I2C): MPU9250/MPU6050 0x68/0x69 or BNO085 0x4A/0x4B ---
+// --- External IMU (I2C): MPU9250/MPU6050/MPU6500 0x68/0x69 or BNO085 0x4A/0x4B ---
 constexpr uint8_t RB_IMU_I2C_ADDR = 0x00; // Auto-probe mode
 
 // --- PCA9685 Channel Allocations ---

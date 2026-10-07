@@ -1,0 +1,6 @@
+[
+  {"name": "MPU9250", "version": "0.4.8"},
+  {"name": "Adafruit BNO08x", "version": "1.2.7"},
+  {"name": "Adafruit BusIO", "version": "1.17.4"},
+  {"name": "Adafruit Unified Sensor", "version": "1.1.15"}
+]

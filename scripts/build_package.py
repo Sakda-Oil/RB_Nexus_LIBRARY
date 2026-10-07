@@ -12,6 +12,7 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = (ROOT / 'VERSION').read_text().strip()
 UPSTREAM = json.loads((ROOT / 'metadata/upstream.json').read_text())
+LIBRARY_DEPENDENCIES = json.loads((ROOT / 'metadata/library_dependencies.json').read_text())
 NOTICE = '# Modified for RB_Nexus on 2026-09-09; based on Espressif Arduino-ESP32 3.3.10.\n'
 
 
@@ -93,6 +94,7 @@ def build(archive, repository, output):
         'checksum': 'SHA-256:' + hashlib.sha256(target.read_bytes()).hexdigest(),
         'size': str(target.stat().st_size), 'boards': [{'name': 'RB_Nexus'}],
         'toolsDependencies': deps,
+        'libraryDependencies': LIBRARY_DEPENDENCIES,
         'help': {'online': repo_url + '/issues'},
     }
     index = {'packages': [{

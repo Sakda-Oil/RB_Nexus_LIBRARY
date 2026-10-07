@@ -6,6 +6,7 @@
 #define SH2_ROTATION_VECTOR 4
 struct sh2_SensorValue_t {
   int sensorId;
+  uint64_t timestamp;
   struct {
     struct { float x,y,z; } accelerometer, gyroscope, magneticField;
     struct { float real,i,j,k; } rotationVector;

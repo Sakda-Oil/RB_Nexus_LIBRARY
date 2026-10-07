@@ -15,6 +15,7 @@ assert 'SHA-256:' + hashlib.sha256(archive.read_bytes()).hexdigest() == platform
 assert platform['architecture'] == 'esp32'
 assert platform['name'] == 'RB_Nexus'
 assert platform['boards'] == [{'name': 'RB_Nexus'}]
+assert platform['libraryDependencies'] == json.loads((ROOT / 'metadata/library_dependencies.json').read_text())
 lookup = {(t['name'], t['version']): t for t in pkg['tools']}
 for dep in platform['toolsDependencies']:
     assert dep['packager'] == pkg['name']

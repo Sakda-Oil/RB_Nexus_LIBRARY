@@ -12,6 +12,9 @@
 #include "RB_Nexus_Safety.h"
 
 // Real micro-ROS types only: a missing dependency must never look like success.
+#if !__has_include(<micro_ros_arduino.h>)
+#error "RB_Nexus: Missing micro_ros_arduino. Install the tested Jazzy snapshot using scripts/install_dependencies.py; Library Manager versions may target a different ROS distribution."
+#endif
 #include <micro_ros_arduino.h>
 #include <rcl/rcl.h>
 #include <rcl/error_handling.h>

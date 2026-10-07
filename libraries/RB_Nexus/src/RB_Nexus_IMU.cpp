@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: LGPL-2.1-or-later
 #include "RB_Nexus.h"
+#if !__has_include(<MPU9250.h>)
+#error "RB_Nexus: Missing MPU9250. Install 'MPU9250 by hideakitai' 0.4.8 in Arduino Library Manager."
+#endif
 #include <MPU9250.h>
+#if !__has_include(<Adafruit_BNO08x.h>)
+#error "RB_Nexus: Missing Adafruit BNO08x. Install 'Adafruit BNO08x' 1.2.7 and select Install All dependencies in Library Manager."
+#endif
 #include <Adafruit_BNO08x.h>
 #include <math.h>
 
@@ -23,24 +29,14 @@ bool readIMURegisters(uint8_t address, uint8_t reg, uint8_t* data, uint8_t count
   return true;
 }
 
-bool hasIdentity(uint8_t address, uint8_t expected) {
-  uint8_t identity = 0;
-  return readIMURegisters(address, 0x75, &identity, 1) && identity == expected;
-}
-
 bool writeIMURegister(uint8_t address, uint8_t reg, uint8_t value) {
   Wire.beginTransmission(address);
   Wire.write(reg); Wire.write(value);
   return Wire.endTransmission() == 0;
 }
 
-bool is6AxisMPUIdentity(uint8_t id) {
-  return id == 0x68 || id == 0x70 || id == 0x72 || id == 0x73;
-}
-
-bool setupMPU6050(uint8_t address) {
-  uint8_t identity = 0;
-  if (!readIMURegisters(address, 0x75, &identity, 1) || !is6AxisMPUIdentity(identity)) return false;
+bool setup6AxisMPU(uint8_t address, uint8_t identity) {
+  if (identity != 0x68 && identity != 0x70) return false;
   if (!writeIMURegister(address, 0x6B, 0x80)) return false;
   delay(100);
   // PLL X gyro, all axes enabled, DLPF ~42/44 Hz, 200 Hz sampling.
@@ -50,6 +46,8 @@ bool setupMPU6050(uint8_t address) {
          writeIMURegister(address, 0x19, 0x04) &&
          writeIMURegister(address, 0x1B, 0x08) && // +/-500 degrees/s
          writeIMURegister(address, 0x1C, 0x08) && // +/-4g
+         // MPU6500 has a separate accelerometer DLPF; MPU6050 has no such register.
+         (identity != 0x70 || writeIMURegister(address, 0x1D, 0x03)) &&
          writeIMURegister(address, 0x38, 0x01);   // DATA_RDY status, polled
 }
 
@@ -69,6 +67,8 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
   _imuType = RBIMUType::Auto;
   _imuReports = 0;
   _imuAddress = 0;
+  _gyroZBias = 0;
+  imuResetRotationZ();
   for (int i = 0; i < 3; ++i) _accel[i] = _gyro[i] = _mag[i] = _angles[i] = NAN;
   for (float& q : _quaternion) q = NAN;
   Wire.setTimeOut(20);
@@ -90,7 +90,9 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
   if (type == RBIMUType::Auto || type == RBIMUType::MPU9250) {
     for (uint8_t addr : {uint8_t(0x68), uint8_t(0x69)}) {
       if (address && address != addr) continue;
-      if (!hasIdentity(addr, 0x71)) continue;
+      uint8_t identity = 0;
+      if (!readIMURegisters(addr, 0x75, &identity, 1) ||
+          (identity != 0x71 && identity != 0x73)) continue;
       mpu = MPU9250();
       MPU9250Setting settings;
       settings.accel_fs_sel = ACCEL_FS_SEL::A4G;
@@ -99,23 +101,24 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
       mpu.setMagneticDeclination(0.0f); // Magnetic north, no location assumption.
       _imuDetected = true;
       _imuType = RBIMUType::MPU9250;
-      _imuModel = "MPU9250 + AK8963";
+      _imuModel = identity == 0x73 ? "MPU9255 + AK8963" : "MPU9250 + AK8963";
       _imuAddress = addr;
       return true;
     }
   }
-  if (type == RBIMUType::Auto || type == RBIMUType::MPU6050 || type == RBIMUType::MPU9250) {
+  // Preserve the MPU9250/MPU6050 compatibility fallback, but report the actual chip.
+  if (type == RBIMUType::Auto || type == RBIMUType::MPU6050 ||
+      type == RBIMUType::MPU6500 || type == RBIMUType::MPU9250) {
     for (uint8_t addr : {uint8_t(0x68), uint8_t(0x69)}) {
       if (address && address != addr) continue;
-      if (!setupMPU6050(addr)) continue;
-      _imuDetected = true;
-      _imuType = RBIMUType::MPU6050;
       uint8_t id = 0;
-      readIMURegisters(addr, 0x75, &id, 1);
+      if (!readIMURegisters(addr, 0x75, &id, 1)) continue;
+      if (type == RBIMUType::MPU6500 && id != 0x70) continue;
+      if (!setup6AxisMPU(addr, id)) continue;
+      _imuDetected = true;
+      _imuType = id == 0x70 ? RBIMUType::MPU6500 : RBIMUType::MPU6050;
       if (id == 0x70) {
         _imuModel = "MPU6500 (6-axis)";
-      } else if (id == 0x73) {
-        _imuModel = "MPU9255 (6-axis)";
       } else {
         _imuModel = "MPU6050 (6-axis)";
       }
@@ -128,7 +131,7 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
 
 bool RBNexusBoard::imuUpdate() {
   if (!_imuDetected) return false;
-  if (_imuType == RBIMUType::MPU6050) {
+  if (_imuType == RBIMUType::MPU6050 || _imuType == RBIMUType::MPU6500) {
     uint8_t status = 0, raw[14];
     if (!readIMURegisters(_imuAddress, 0x3A, &status, 1) || !(status & 1)) return false;
     if (!readIMURegisters(_imuAddress, 0x3B, raw, sizeof(raw))) return false;
@@ -140,6 +143,7 @@ bool RBNexusBoard::imuUpdate() {
     }
     _imuReports = ACCEL_VALID | GYRO_VALID; // No magnetometer or orientation fusion.
     _imuAccelTime = _imuGyroTime = millis();
+    updateRotationZ(_gyro[2], micros());
     return true;
   }
   if (_imuType == RBIMUType::MPU9250) {
@@ -159,11 +163,13 @@ bool RBNexusBoard::imuUpdate() {
     _quaternion[3] = mpu.getQuaternionZ();
     _imuReports = ACCEL_VALID | GYRO_VALID | ORIENTATION_VALID;
     _imuAccelTime = _imuGyroTime = _imuOrientationTime = millis();
+    updateRotationZ(_gyro[2], micros());
     return true;
   }
 
   if (bno.wasReset()) {
     _imuReports = 0;
+    _rotationZPrimed = false;
     if (!enableBNOReports()) { _imuDetected = false; return false; }
   }
   bool changed = false;
@@ -185,6 +191,8 @@ bool RBNexusBoard::imuUpdate() {
         _gyro[1] = event.un.gyroscope.y;
         _gyro[2] = event.un.gyroscope.z;
         _imuGyroTime = now; _imuReports |= GYRO_VALID;
+        // Use sensor timestamps so queued reports do not share a host receive time.
+        updateRotationZ(_gyro[2], uint32_t(event.timestamp));
         break;
       case SH2_MAGNETIC_FIELD_CALIBRATED:
         _mag[0] = event.un.magneticField.x;
@@ -214,6 +222,38 @@ bool RBNexusBoard::imuDataFresh(uint32_t maxAgeMs) const {
   return _imuDetected && (_imuReports & 3) == 3 &&
          uint32_t(millis() - _imuAccelTime) <= maxAgeMs &&
          uint32_t(millis() - _imuGyroTime) <= maxAgeMs;
+}
+void RBNexusBoard::updateRotationZ(float radiansPerSecond, uint32_t sampleUs) {
+  if (!isfinite(radiansPerSecond)) { _rotationZPrimed = false; return; }
+  const float rate = (radiansPerSecond - _gyroZBias) * RAD_TO_DEG;
+  const uint32_t elapsed = sampleUs - _rotationZSampleUs; // Handles timer wrap.
+  // Never extrapolate motion through a long missing-data interval.
+  if (_rotationZPrimed && elapsed <= 250000) {
+    _rotationZ += 0.5f * (_previousGyroZ + rate) * (elapsed * 0.000001f);
+  }
+  _previousGyroZ = rate;
+  _rotationZSampleUs = sampleUs;
+  _rotationZReceiveMs = millis();
+  _rotationZPrimed = true;
+}
+float RBNexusBoard::imuRotationZ() const {
+  return _imuDetected && _rotationZPrimed ? _rotationZ : NAN;
+}
+bool RBNexusBoard::imuRotationZFresh(uint32_t maxAgeMs) const {
+  return _imuDetected && _rotationZPrimed &&
+         uint32_t(millis() - _rotationZReceiveMs) <= maxAgeMs;
+}
+bool RBNexusBoard::imuResetRotationZ(float degrees) {
+  if (!isfinite(degrees)) return false;
+  _rotationZ = degrees;
+  _rotationZPrimed = false;
+  return true;
+}
+bool RBNexusBoard::imuSetGyroZBias(float radiansPerSecond) {
+  if (!isfinite(radiansPerSecond)) return false;
+  _gyroZBias = radiansPerSecond;
+  _rotationZPrimed = false;
+  return true;
 }
 bool RBNexusBoard::imuOrientationFresh(uint32_t maxAgeMs) const {
   return _imuDetected && (_imuReports & ORIENTATION_VALID) &&

@@ -3,9 +3,10 @@ enum class ACCEL_FS_SEL { A4G };
 enum class GYRO_FS_SEL { G500DPS };
 struct MPU9250Setting { ACCEL_FS_SEL accel_fs_sel; GYRO_FS_SEL gyro_fs_sel; };
 inline bool fakeMPUNew = false;
+inline bool fakeMPUSetup = true;
 class MPU9250 {
 public:
-  bool setup(uint8_t, MPU9250Setting, FakeWire&) { return true; }
+  bool setup(uint8_t, MPU9250Setting, FakeWire&) { return fakeMPUSetup; }
   void setMagneticDeclination(float) {}
   bool update() { bool ready = fakeMPUNew; fakeMPUNew=false; return ready; }
   float getAcc(int i) { return i == 2 ? 1 : 0; }

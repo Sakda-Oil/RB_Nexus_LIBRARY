@@ -3,8 +3,9 @@
 void setup() {
   Serial.begin(115200);
   RB.begin();
-  // เลือก Auto, MPU6050, MPU9250 หรือ BNO085 (หนึ่งตัวทำงานในแต่ละครั้ง)
-  if (!RB.imuBegin(RBIMUType::Auto)) Serial.println("IMU not found");
+  // เลือก Auto, MPU6050, MPU6500, MPU9250 หรือ BNO085 (ครั้งละหนึ่งตัว)
+  if (!RB.imuBegin(RBIMUType::Auto)) Serial.println("IMU initialization failed; check wiring and WHO_AM_I");
+  else Serial.println(RB.imuModelName());
 }
 void loop() {
   RB.update();
