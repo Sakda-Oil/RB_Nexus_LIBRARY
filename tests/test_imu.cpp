@@ -86,7 +86,7 @@ int main() {
   Wire.registers[0x47]=0x17; Wire.registers[0x48]=0x07; // 5895 = 90 deg/s
   RB.imuUpdate();
   for (int i=0; i<50; ++i) { fakeNow+=20; RB.imuUpdate(); }
-  assert(fabsf(RB.imuRotationZ()-90)<0.01f && RB.imuRotationZFresh());
+  assert(fabsf(RB.imuRotationZ()+90)<0.01f && RB.imuRotationZFresh());
   assert(!RB.imuOrientationFresh() && isnan(RB.yaw()));
   assert(!RB.imuResetRotationZ(NAN) && !RB.imuSetGyroZBias(INFINITY));
   assert(RB.imuResetRotationZ(10));
@@ -94,17 +94,17 @@ int main() {
   RB.imuUpdate(); fakeNow+=100; RB.imuUpdate();
   assert(fabsf(RB.imuRotationZ()-10)<0.01f);
   RB.imuSetGyroZBias(0); RB.imuResetRotationZ();
-  Wire.registers[0x47]=0xE8; Wire.registers[0x48]=0xF9; // -90 deg/s
+  Wire.registers[0x47]=0xE8; Wire.registers[0x48]=0xF9; // -90 deg/s (right turn)
   RB.imuUpdate(); fakeNow+=100; RB.imuUpdate();
-  assert(fabsf(RB.imuRotationZ()+9)<0.01f);
+  assert(fabsf(RB.imuRotationZ()-9)<0.01f);
   Wire.registers[0x3A]=0; fakeNow+=501;
   assert(!RB.imuUpdate() && !RB.imuRotationZFresh());
   Wire.registers[0x3A]=1; RB.imuUpdate(); // Gap is skipped, not extrapolated.
-  assert(fabsf(RB.imuRotationZ()+9)<0.01f);
+  assert(fabsf(RB.imuRotationZ()-9)<0.01f);
   fakeNow=4294960; RB.imuResetRotationZ(); RB.imuUpdate();
   fakeNow+=20; RB.imuUpdate(); // micros() wraps here
-  assert(fabsf(RB.imuRotationZ()+1.8f)<0.01f);
-  puts("PASS relative Z degrees, bias, reset, direction, stale gaps and timer wrap");
+  assert(fabsf(RB.imuRotationZ()-1.8f)<0.01f);
+  puts("PASS relative Z degrees, bias, reset, direction (right positive, left negative), stale gaps and timer wrap");
 
   fakeBNOFound=true; fakeBNOEnable=true;
   assert(RB.imuBegin(RBIMUType::BNO085));
@@ -112,7 +112,7 @@ int main() {
   g.timestamp=1000000; fakeEvents.push_back(g);
   g.timestamp=1100000; fakeEvents.push_back(g);
   RB.imuUpdate(); // Both reports received in the same host millisecond.
-  assert(fabsf(RB.imuRotationZ()-9)<0.01f);
+  assert(fabsf(RB.imuRotationZ()+9)<0.01f);
   fakeBNOReset=true; RB.imuUpdate(); assert(!RB.imuRotationZFresh());
   puts("PASS BNO queued gyro sensor timestamps and reset freshness");
 }

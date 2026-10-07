@@ -225,7 +225,8 @@ bool RBNexusBoard::imuDataFresh(uint32_t maxAgeMs) const {
 }
 void RBNexusBoard::updateRotationZ(float radiansPerSecond, uint32_t sampleUs) {
   if (!isfinite(radiansPerSecond)) { _rotationZPrimed = false; return; }
-  const float rate = (radiansPerSecond - _gyroZBias) * RAD_TO_DEG;
+  // Right turn (clockwise) is positive (+), left turn (counter-clockwise) is negative (-)
+  const float rate = -(radiansPerSecond - _gyroZBias) * RAD_TO_DEG;
   const uint32_t elapsed = sampleUs - _rotationZSampleUs; // Handles timer wrap.
   // Never extrapolate motion through a long missing-data interval.
   if (_rotationZPrimed && elapsed <= 250000) {
