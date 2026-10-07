@@ -56,7 +56,7 @@ jobs:
             echo "Release $tag already exists. Increase VERSION before publishing a new archive."
             exit 1
           fi
-          gh release create "$tag" "dist/RB_Nexus-esp32-$version.zip" dist/package_RB_Nexus_index.json --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "RB_Nexus $version" --notes-file docs/RELEASE_NOTES.md
+          gh release create "$tag" "dist/RB_Nexus-esp32-$version.zip" dist/package_RB_Nexus_index.json --repo "$REPOSITORY" --target "$GITHUB_SHA" --title "RB_Nexus $version" --notes "RB_Nexus $version board package. Install using the Boards Manager index."
           cp dist/package_RB_Nexus_index.json package_RB_Nexus_index.json
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

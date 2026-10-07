@@ -39,5 +39,5 @@ Hardware information and verified peripheral pin mapping for **RB Nexus V0.1**:
 - MPU9250 + AK8963: I2C 0x68/0x69 (magnetometer 0x0C).
 - GY-BNO085: I2C 0x4A/0x4B in I2C mode.
 - Shared SDA GPIO21, SCL GPIO22; I2C logic/pull-ups must be 3.3 V.
-- Verify the supply and mode straps against the specific module. See [IMU guide](docs/html/imu.html).
+- Verify the supply and mode straps against the specific module.
 - Historical QC statements above are not new physical test results for this software release.

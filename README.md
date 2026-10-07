@@ -55,14 +55,7 @@ RB.emergencyStop();   // latch จนเรียก clearEmergencyStop()
 
 เรียก RB.update() ใน loop สำหรับ PID, IMU และ software watchdog. ตัวอย่าง ROS มอเตอร์หยุดเมื่อไม่มีคำสั่ง 500 ms; ส่งคำสั่งซ้ำอย่างน้อย 10 Hz
 
-## คู่มือและการทดสอบ
-
-- [คู่มือ HTML](docs/html/index.html)
-- [MPU6050 / MPU9250 / GY-BNO085](docs/html/imu.html)
-- [API](docs/html/api.html)
-- [micro-ROS](docs/html/microros.html)
-- [ผลการตรวจรุ่น 0.2.1](docs/TEST_RESULTS_0.2.1.md)
-- [รายงานข้อผิดพลาดก่อนแก้](docs/CODE_REVIEW_2026-10-06.md)
+## การทดสอบ
 
 ```sh
 python scripts/install_dependencies.py --config-file arduino-cli.yaml
