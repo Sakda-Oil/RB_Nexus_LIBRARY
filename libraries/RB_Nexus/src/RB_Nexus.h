@@ -16,11 +16,12 @@
 
 namespace RBNexus {
 constexpr const char* name = "RB_Nexus";
-constexpr const char* version = "0.2.2";
+constexpr const char* version = "0.2.3";
 constexpr bool peripheralPinMapAvailable = true;
 }
 
 enum class RBIMUType : uint8_t { Auto, MPU9250, BNO085, MPU6050, MPU6500 };
+struct sh2_SensorEvent;
 
 // PID Controller configuration structure
 struct RBPIDConfig {
@@ -154,11 +155,13 @@ public:
   float roll();
   float pitch();
   float yaw();
-  // Relative rotation about the sensor's Z axis, accumulated gyro degrees (not compass heading).
+  // Relative gyro degrees: right/clockwise positive when sensor +Z points up.
+  // This convention applies only to imuRotationZ(), not raw gyro, Euler or ROS data.
   float imuRotationZ() const;
   bool imuRotationZFresh(uint32_t maxAgeMs = 500) const;
   bool imuResetRotationZ(float degrees = 0.0f);
   bool imuSetGyroZBias(float radiansPerSecond); // Measure while stationary.
+  uint32_t imuGyroSampleCount() const { return _imuGyroSamples; }
   float quaternionW() const { return _quaternion[0]; }
   float quaternionX() const { return _quaternion[1]; }
   float quaternionY() const { return _quaternion[2]; }
@@ -234,7 +237,10 @@ private:
   float _rotationZ = 0, _gyroZBias = 0, _previousGyroZ = 0;
   uint32_t _rotationZSampleUs = 0, _rotationZReceiveMs = 0;
   bool _rotationZPrimed = false;
+  uint32_t _imuGyroSamples = 0, _bnoReportCount = 0;
   void updateRotationZ(float radiansPerSecond, uint32_t sampleUs);
+  void receiveBNOEvent(sh2_SensorEvent* event);
+  bool recoverBNOReset();
 
   uint8_t readRegister8(uint8_t reg);
   void writeRegister8(uint8_t reg, uint8_t value);

@@ -66,6 +66,7 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
   _imuModel = "None";
   _imuType = RBIMUType::Auto;
   _imuReports = 0;
+  _imuGyroSamples = _bnoReportCount = 0;
   _imuAddress = 0;
   _gyroZBias = 0;
   imuResetRotationZ();
@@ -77,7 +78,12 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
   if (type == RBIMUType::Auto || type == RBIMUType::BNO085) {
     for (uint8_t addr : {uint8_t(0x4A), uint8_t(0x4B)}) {
       if (address && address != addr) continue;
-      if (probe(addr) && bno.begin_I2C(addr, &Wire) && enableBNOReports()) {
+      if (probe(addr) && bno.begin_I2C(addr, &Wire)) {
+        // getSensorEvent() exposes only the last report in a multi-report packet.
+        // Decode every SH2 callback, including gyro reports followed by rotation.
+        if (sh2_setSensorCallback([](void* cookie, sh2_SensorEvent_t* event) {
+              static_cast<RBNexusBoard*>(cookie)->receiveBNOEvent(event);
+            }, this) != SH2_OK || !enableBNOReports()) continue;
         _imuDetected = true;
         _imuType = RBIMUType::BNO085;
         _imuModel = "BNO085 / SH2";
@@ -143,6 +149,7 @@ bool RBNexusBoard::imuUpdate() {
     }
     _imuReports = ACCEL_VALID | GYRO_VALID; // No magnetometer or orientation fusion.
     _imuAccelTime = _imuGyroTime = millis();
+    ++_imuGyroSamples;
     updateRotationZ(_gyro[2], micros());
     return true;
   }
@@ -163,23 +170,37 @@ bool RBNexusBoard::imuUpdate() {
     _quaternion[3] = mpu.getQuaternionZ();
     _imuReports = ACCEL_VALID | GYRO_VALID | ORIENTATION_VALID;
     _imuAccelTime = _imuGyroTime = _imuOrientationTime = millis();
+    ++_imuGyroSamples;
     updateRotationZ(_gyro[2], micros());
     return true;
   }
 
-  if (bno.wasReset()) {
-    _imuReports = 0;
-    _rotationZPrimed = false;
-    if (!enableBNOReports()) { _imuDetected = false; return false; }
-  }
-  bool changed = false;
-  // Bound work so servicing IMU does not starve motor/watchdog updates.
+  if (!recoverBNOReset()) return false;
+  const uint32_t startCount = _bnoReportCount;
+  // Bound transfers; handle every report within each transfer in the callback.
   for (uint8_t n = 0; n < 8; ++n) {
-    sh2_SensorValue_t event = {};
-    if (!bno.getSensorEvent(&event)) break;
-    changed = true;
-    uint32_t now = millis();
-    switch (event.sensorId) {
+    const uint32_t before = _bnoReportCount;
+    sh2_service();
+    if (!recoverBNOReset()) return false;
+    if (_bnoReportCount == before) break;
+  }
+  return _bnoReportCount != startCount;
+}
+
+bool RBNexusBoard::recoverBNOReset() {
+  if (!bno.wasReset()) return true;
+  _imuReports = 0;
+  _rotationZPrimed = false;
+  if (!enableBNOReports()) { _imuDetected = false; return false; }
+  return true;
+}
+
+void RBNexusBoard::receiveBNOEvent(sh2_SensorEvent_t* raw) {
+  if (!_imuDetected || _imuType != RBIMUType::BNO085) return;
+  sh2_SensorValue_t event = {};
+  if (sh2_decodeSensorEvent(&event, raw) != SH2_OK) return;
+  const uint32_t now = millis();
+  switch (event.sensorId) {
       case SH2_ACCELEROMETER:
         _accel[0] = event.un.accelerometer.x;
         _accel[1] = event.un.accelerometer.y;
@@ -187,10 +208,13 @@ bool RBNexusBoard::imuUpdate() {
         _imuAccelTime = now; _imuReports |= ACCEL_VALID;
         break;
       case SH2_GYROSCOPE_CALIBRATED:
+        if (!isfinite(event.un.gyroscope.x) || !isfinite(event.un.gyroscope.y) ||
+            !isfinite(event.un.gyroscope.z)) return;
         _gyro[0] = event.un.gyroscope.x;
         _gyro[1] = event.un.gyroscope.y;
         _gyro[2] = event.un.gyroscope.z;
         _imuGyroTime = now; _imuReports |= GYRO_VALID;
+        ++_imuGyroSamples;
         // Use sensor timestamps so queued reports do not share a host receive time.
         updateRotationZ(_gyro[2], uint32_t(event.timestamp));
         break;
@@ -203,7 +227,7 @@ bool RBNexusBoard::imuUpdate() {
         float w = event.un.rotationVector.real, x = event.un.rotationVector.i;
         float y = event.un.rotationVector.j, z = event.un.rotationVector.k;
         float norm = sqrtf(w*w + x*x + y*y + z*z);
-        if (!isfinite(norm) || norm < 0.001f) break;
+        if (!isfinite(norm) || norm < 0.001f) return;
         w /= norm; x /= norm; y /= norm; z /= norm;
         _quaternion[0] = w; _quaternion[1] = x; _quaternion[2] = y; _quaternion[3] = z;
         _angles[0] = atan2f(2*(w*x+y*z), 1-2*(x*x+y*y)) * RAD_TO_DEG;
@@ -212,10 +236,9 @@ bool RBNexusBoard::imuUpdate() {
         _imuOrientationTime = now; _imuReports |= ORIENTATION_VALID;
         break;
       }
-      default: break;
-    }
+      default: return;
   }
-  return changed;
+  ++_bnoReportCount;
 }
 
 bool RBNexusBoard::imuDataFresh(uint32_t maxAgeMs) const {

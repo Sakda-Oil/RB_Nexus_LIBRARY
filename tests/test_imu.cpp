@@ -115,4 +115,26 @@ int main() {
   assert(fabsf(RB.imuRotationZ()+9)<0.01f);
   fakeBNOReset=true; RB.imuUpdate(); assert(!RB.imuRotationZFresh());
   puts("PASS BNO queued gyro sensor timestamps and reset freshness");
+
+  assert(RB.imuBegin(RBIMUType::BNO085));
+  assert(RB.imuGyroSampleCount()==0);
+  // Regression: acceleration + gyro + rotation share each SHTP packet.
+  // The old single-value wrapper returned only rotation, losing every gyro sample.
+  for (int i=0; i<100; ++i) {
+    g.timestamp=2000000 + i*20000;
+    fakeEvents.push_back(a); fakeEvents.push_back(g); fakeEvents.push_back(q);
+    fakeNow+=20;
+    assert(RB.imuUpdate());
+  }
+  assert(RB.imuGyroSampleCount()==100);
+  assert(RB.imuDataFresh() && RB.imuOrientationFresh() && RB.imuRotationZFresh());
+  assert(fabsf(RB.imuRotationZ()+178.2f)<0.02f); // 99 intervals, left negative
+  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==100); // No duplicate samples
+  fakeBNODecodeOK=false; fakeEvents.push_back(g);
+  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==100);
+  fakeBNODecodeOK=true; g.un.gyroscope.z=NAN; fakeEvents.push_back(g);
+  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==100);
+  fakeBNOResetOnService=true; RB.imuUpdate();
+  assert(!RB.imuDataFresh() && !RB.imuRotationZFresh());
+  puts("PASS BNO batched reports retain all gyro samples, decoding errors and in-service resets");
 }
