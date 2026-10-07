@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="th"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>การเผยแพร่รุ่น — RB_Nexus</title><link rel="stylesheet" href="style.css?v=guide-20261007"><script src="script.js?v=0.2.1" defer></script></head>
+<title>การเผยแพร่รุ่น — RB_Nexus</title><link rel="stylesheet" href="style.css?v=0.2.1"><script src="script.js?v=0.2.1" defer></script></head>
 <body>  <nav class="sidebar">
     <a href="index.html" class="brand">RB_Nexus <span class="brand-badge">v0.2.1</span></a>
 
@@ -32,79 +32,6 @@
     <a href="release.html" class="nav-link active">การ Release แพ็กเกจ</a>
   </nav>
 
-<main class="main-content">
-<header><h1>เปลี่ยนเวอร์ชันและออก Release ใหม่</h1><p>คู่มือภาษาไทยสำหรับผู้ดูแล RB_Nexus · ปรับปรุง 7 ตุลาคม 2026</p>
-<p>อ้างอิงโครงสร้างซอร์สรุ่น 0.2.1 · ใช้ Windows PowerShell · ตัวอย่างรุ่นถัดไป 0.2.2</p>
-<button class="guide-print" type="button" onclick="window.print()">พิมพ์ / บันทึกเป็น PDF</button></header>
-<div class="alert alert-info"><strong>ตัวอย่าง:</strong> เปลี่ยนซอฟต์แวร์ 0.2.1 → 0.2.2 คู่มือนี้อธิบายการทำเอง ยังไม่ได้ออก 0.2.2 ให้ และไม่ต้องเปลี่ยนเวอร์ชันซอฟต์แวร์เพียงเพราะอ่านหรือพิมพ์คู่มือนี้</div><nav class="guide-toc" aria-label="สารบัญการออกรุ่น"><strong>สารบัญ</strong><p><a href="#choose">เลือกเลขรุ่น</a> · <a href="#version-files">แก้เลข 3 จุด</a> · <a href="#release-docs">อัปเดตเอกสาร</a> · <a href="#build">สร้างแพ็กเกจ</a> · <a href="#local-install">ทดลองติดตั้ง</a> · <a href="#github">เผยแพร่ GitHub</a> · <a href="#verify-release">ตรวจหลังเผยแพร่</a> · <a href="#docs-only">แก้เอกสารอย่างเดียว</a> · <a href="#failure">แก้ Release ล้มเหลว</a></p></nav><section id="choose"><h2>1. เลือกเลขเวอร์ชันใหม่</h2>
-<table><thead><tr><th>ชนิดงาน</th><th>ตัวอย่าง</th><th>แนวทาง</th></tr></thead><tbody><tr><td>แก้บั๊ก ใช้ API เดิม</td><td>0.2.1 → 0.2.2</td><td>เพิ่มเลขท้าย</td></tr><tr><td>เพิ่มความสามารถ/API โดยยังรักษาวิธีใช้เดิม</td><td>0.2.1 → 0.3.0</td><td>เพิ่มเลขกลางและตั้งเลขท้ายเป็น 0</td></tr><tr><td>เปลี่ยนวิธีใช้จนโค้ดเก่าต้องแก้</td><td>เลือกรุ่นใหม่และเขียน migration notes</td><td>ก่อน 1.0 ให้ระบุ breaking changes ชัดเจน; ไม่ถือว่าทุกรุ่น 0.x compatible โดยอัตโนมัติ</td></tr><tr><td>แก้คำสะกด/คู่มืออย่างเดียว</td><td>คง 0.2.1</td><td>ใช้ขั้นตอนเอกสารล้วนด้านล่าง</td></tr></tbody></table><p>ตรวจ <a href="https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases">Releases ที่มีอยู่</a> ก่อนเลือกเลข ห้ามนำเลขรุ่นที่เผยแพร่ archive แล้วมาใช้ซ้ำ</p><p><strong>เลขซอฟต์แวร์และเลข core คนละเรื่อง:</strong> RB_Nexus 0.2.2 ยังใช้ Arduino-ESP32 3.3.10 ได้ ไม่ต้องเปลี่ยน metadata/upstream.json เมื่อแก้ไดรเวอร์ทั่วไป</p></section>
-<section id="version-files"><h2>2. แก้เลขรุ่นหลักให้ตรงกันทั้ง 3 จุด</h2>
-<p>ทำบน branch งานของคุณหลังเตรียมโค้ดแล้ว:</p><h3>ไฟล์ที่ 1: VERSION ที่โฟลเดอร์หลัก</h3><div class="code-container"><pre><code class="language-text">0.2.2</code></pre></div>
-<p>ใส่เฉพาะเลข ไม่ใส่ v และไม่ใส่คำอธิบาย</p><h3>ไฟล์ที่ 2: libraries/RB_Nexus/library.properties</h3><div class="code-container"><pre><code class="language-text">version=0.2.2</code></pre></div>
-<p>แก้เฉพาะบรรทัด version= ส่วน depends เปลี่ยนเมื่อมีเหตุผลและได้ทดสอบ dependency รุ่นใหม่จริง</p><h3>ไฟล์ที่ 3: libraries/RB_Nexus/src/RB_Nexus.h</h3><div class="code-container"><pre><code class="language-cpp">namespace RBNexus {
-constexpr const char* name = &quot;RB_Nexus&quot;;
-constexpr const char* version = &quot;0.2.2&quot;;
-constexpr bool peripheralPinMapAvailable = true;
-}</code></pre></div>
-<p>แก้ค่า version ใน namespace เดิม ไม่เพิ่ม namespace ซ้ำ บอร์ดใช้ค่านี้เมื่อรายงานเวอร์ชันไลบรารี</p><h3>ตรวจเทียบก่อนทำต่อ</h3><div class="code-container"><pre><code class="language-powershell">Get-Content VERSION
-Select-String -Path libraries/RB_Nexus/library.properties -Pattern &#x27;^version=&#x27;
-Select-String -Path libraries/RB_Nexus/src/RB_Nexus.h -Pattern &#x27;const char\* version&#x27;
-git diff -- VERSION libraries/RB_Nexus/library.properties libraries/RB_Nexus/src/RB_Nexus.h</code></pre></div>
-<p><strong>ผลที่ต้องเห็น:</strong> ทั้งสามแห่งเป็น 0.2.2 ถ้าต่างกันให้แก้ให้ตรงก่อน build</p></section>
-<section id="release-docs"><h2>3. อัปเดตคู่มือและบันทึกการเปลี่ยนแปลง</h2>
-<ul><li>README.md: เลขรุ่นบนหัวเรื่อง วิธีติดตั้ง ตัวอย่าง และลิงก์รายงานใหม่</li><li>docs/html/*.html: badge รุ่นปัจจุบันและข้อความที่อ้างรุ่นปัจจุบัน; เก็บเลขรุ่นในตัวอย่างเปรียบเทียบ/ประวัติตามจริง</li><li>docs/RELEASE_NOTES.md: เขียนสรุปปัญหา สิ่งที่แก้ dependency และข้อจำกัด ไฟล์นี้ถูกใช้เป็นข้อความบนหน้า Release</li><li>สร้าง docs/TEST_RESULTS_0.2.2.md และแก้ลิงก์ “ผลการตรวจสอบรุ่นนี้” ในหน้า HTML ให้ชี้รายงานใหม่ เก็บรายงาน 0.2.1 ไว้เป็นประวัติ</li><li>ถ้าแก้ CSS/JS และเบราว์เซอร์ยังแสดงของเดิม ให้เปลี่ยน query version ของ style.css/script.js ตามการแก้จริง</li></ul><p>อย่า Replace All 0.2.1 เป็น 0.2.2 ทั้ง repository เพราะจะเปลี่ยนประวัติและลิงก์ archive ที่ยังไม่เผยแพร่ <strong>ไม่แก้ package_RB_Nexus_index.json ที่โฟลเดอร์หลักด้วยมือ</strong> และไม่แก้ checksum ด้วยการคาดเดา</p><h3>ตัวอย่างข้อความใน RELEASE_NOTES.md</h3><div class="code-container"><pre><code class="language-markdown"># RB_Nexus 0.2.2
-
-- แก้ [ระบุปัญหาที่พบ] ให้ [พฤติกรรมหลังแก้]
-- เพิ่ม/ปรับ [API หรือตัวอย่างที่เกี่ยวข้อง]
-- Dependency: [คงเดิม หรือระบุรุ่นที่เปลี่ยน]
-
-การตรวจสอบ: [กรอกเฉพาะผลที่รันจริง]
-ข้อจำกัด/งานที่ยังต้องตรวจบนบอร์ด: [ระบุให้ชัด]</code></pre></div>
-<p>ไม่คัดลอกข้อความ “ผ่านทั้งหมด” จากรุ่นก่อนมาใช้ก่อนรันทดสอบรุ่นใหม่</p></section>
-<section id="build"><h2>4. ทดสอบและสร้างแพ็กเกจในเครื่อง</h2>
-<p>ใช้เครื่องมือและตัวแปรตาม <a href="how_to_modify.html#tools">คู่มือเตรียมเครื่อง</a> จากนั้นรันทดสอบใน <a href="how_to_modify.html#test">ขั้นตอนทดสอบ</a> แล้วสร้าง archive:</p><div class="code-container"><pre><code class="language-powershell">python -X utf8 scripts/build_package.py --repository Sakda-Oil/RB_Nexus_LIBRARY
-python -X utf8 scripts/verify_package.py
-python -X utf8 scripts/check_docs.py</code></pre></div>
-<p>build_package.py อ่าน VERSION อัตโนมัติ จึงไม่ต้องแก้ชื่อ ZIP ในสคริปต์เอง ผลที่ควรได้สำหรับตัวอย่างนี้:</p><div class="code-container"><pre><code class="language-text">dist/RB_Nexus-esp32-0.2.2.zip
-dist/package_RB_Nexus_index.json</code></pre></div>
-<p>verify_package.py ตรวจ SHA-256 ขนาดไฟล์ โครงสร้างบอร์ด dependency และซอร์สที่บรรจุใน archive โฟลเดอร์ dist และ .cache ไม่ต้อง commit เพราะ build ใหม่ได้</p></section>
-<section id="local-install"><h2>5. ทดลองติดตั้งแพ็กเกจก่อนเผยแพร่</h2>
-<p>เปิด PowerShell สองหน้าต่างที่โฟลเดอร์โปรเจกต์ ใช้ config เดียวกันตามคู่มือเตรียมเครื่อง ขั้นตอนนี้ติดตั้งแพ็กเกจทดสอบลง .cache profile และอาจแทนที่บอร์ดรุ่นก่อนใน profile นั้น</p><h3>หน้าต่าง A: สร้าง test index และเปิดเซิร์ฟเวอร์</h3><div class="code-container"><pre><code class="language-powershell">python -X utf8 scripts/local_test_index.py --port 8765
-python -m http.server 8765 --bind 127.0.0.1 --directory dist</code></pre></div>
-<p>คงหน้าต่างนี้ไว้จนติดตั้งเสร็จ URL นี้รับเฉพาะจากเครื่องตัวเอง ถ้าพอร์ตชนให้เลือกพอร์ตใหม่แล้วเปลี่ยนทั้งสองหน้าต่างให้ตรงกัน</p><h3>หน้าต่าง B: ติดตั้งและคอมไพล์จากแพ็กเกจ</h3><div class="code-container"><pre><code class="language-powershell">$rbCli = (Resolve-Path &#x27;.cache/tools/arduino-cli.exe&#x27;).Path
-$rbConfig = (Resolve-Path &#x27;.cache/arduino-cli.yaml&#x27;).Path
-$rbTestIndex = &#x27;http://127.0.0.1:8765/package_RB_Nexus_test_index.json&#x27;
-&amp; $rbCli --config-file $rbConfig core update-index --additional-urls $rbTestIndex
-&amp; $rbCli --config-file $rbConfig core install RB_Nexus:esp32@0.2.2 --additional-urls $rbTestIndex
-python -X utf8 scripts/compile_examples.py --cli $rbCli --config-file $rbConfig --installed-library</code></pre></div>
-<p>ผลสุดท้ายต้อง Failed: 0 จากนั้นกด Ctrl+C ที่หน้าต่าง A อย่าส่ง URL localhost หรือ test index ขึ้นเป็นลิงก์ให้ผู้ใช้ติดตั้ง ถ้าแก้ซอร์สหลังจากขั้นตอนนี้ ต้องสร้าง archive ใหม่และตรวจแพ็กเกจอีกครั้ง</p><p>หาก CLI ใช้ archive เก่าจาก cache ขณะพัฒนารุ่นที่ยังไม่เผยแพร่ ให้ตรวจ checksum ใน dist ก่อน และใช้ config/profile ทดสอบใหม่หรือถอนแพ็กเกจทดสอบใน profile นั้นแล้วติดตั้งใหม่ อย่าเขียนทับ asset ที่เผยแพร่แล้ว</p></section>
-<section id="github"><h2>6. ส่งขึ้น GitHub และให้ workflow ออกรุ่น</h2>
-<ol><li>Commit/push branch งาน แล้วเปิด pull request เข้า main ตาม <a href="how_to_modify.html#publish">ตัวอย่างคำสั่ง</a></li><li>ตรวจ diff ว่ามีโค้ด คู่มือ VERSION และ release notes ครบ ไม่มี credentials</li><li>รอ CI Verification ผ่านใน pull request แล้ว Merge เข้า main</li><li>ไปแท็บ <a href="https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/actions">Actions</a> รอทั้ง CI Verification และ Build and release สำเร็จ</li></ol><p><strong>สำคัญ:</strong> workflow รุ่นปัจจุบันเริ่ม Build and release ทุก push เข้า main ยกเว้นการเปลี่ยนเฉพาะ root index ดังนั้นอย่าส่งโค้ดระหว่างพัฒนาหลายครั้งเข้า main โดยไม่เตรียมเลขรุ่นใหม่ และอย่าสร้าง tag/release v0.2.2 เองล่วงหน้า ระบบสร้างให้หลังทดสอบผ่าน</p><h3>ระบบทำอะไรให้</h3><ol><li>ทดสอบ logic และลิงก์คู่มือ ติดตั้ง dependency จริง</li><li>สร้าง archive ตรวจ checksum และทดลองติดตั้ง</li><li>คอมไพล์ทุกตัวอย่าง รวมกรณี flash 8 MB</li><li>ตรวจว่า tag เลขรุ่นนี้ยังไม่เคยเผยแพร่</li><li>สร้าง Release v0.2.2 และแนบ ZIP + index</li><li>อัปเดต package_RB_Nexus_index.json บน main ด้วย commit ของ github-actions[bot]</li></ol><p>อย่าอ้างว่าพร้อมติดตั้งเพียงเพราะ git push สำเร็จ ต้องรอขั้น Publish immutable release สำเร็จด้วย</p></section>
-<section id="verify-release"><h2>7. ตรวจหลังเผยแพร่และอัปเดตใน Arduino IDE</h2>
-<p>เปิด Releases → รุ่นใหม่ ตรวจว่ามีไฟล์แนบทั้งสองรายการ:</p><div class="code-container"><pre><code class="language-text">RB_Nexus-esp32-0.2.2.zip
-package_RB_Nexus_index.json</code></pre></div>
-<p>ไฟล์ Source code (zip) ที่ GitHub สร้างให้เองไม่ใช่แพ็กเกจ Boards Manager จากนั้น sync main กลับเครื่อง:</p><div class="code-container"><pre><code class="language-powershell">git switch main
-git pull --ff-only origin main
-Get-Content VERSION
-git status --short</code></pre></div>
-<p>เปิด root index ดูว่า version เป็น 0.2.2, URL มี /releases/download/v0.2.2/ และไฟล์ดาวน์โหลดได้ URL ที่ผู้ใช้เพิ่มใน Preferences ยังเป็น URL เดิม:</p><div class="code-container"><pre><code class="language-text">https://raw.githubusercontent.com/Sakda-Oil/RB_Nexus_LIBRARY/main/package_RB_Nexus_index.json</code></pre></div>
-<p>ใน Arduino IDE เปิด Boards Manager → ค้นหา RB_Nexus → เลือกเวอร์ชันใหม่ → Update/Install; อัปเดต dependency ตาม release notes ถ้ามีการเปลี่ยน แล้ว compile/upload ตัวอย่าง BoardInfo หรือ IMURaw ใหม่</p><p>บันทึกผล CI และผลฮาร์ดแวร์จริงลงรายงาน อย่าแก้ archive รุ่นที่เผยแพร่แล้ว ถ้าพบข้อผิดพลาดให้แก้เป็นรุ่นถัดไป เช่น 0.2.3</p></section>
-<section id="docs-only"><h2>8. กรณีแก้เฉพาะคู่มือ ไม่ออกรุ่นซอฟต์แวร์</h2>
-<p>ใช้ขั้นตอนนี้เฉพาะเมื่อไม่มีการเปลี่ยน driver, sketch, scripts, dependency หรือ workflow คง VERSION/library.properties/header ไว้เท่าเดิม และตรวจคู่มือในเครื่องก่อน</p><div class="code-container"><pre><code class="language-powershell">git switch main
-git pull --ff-only origin main
-# แก้เฉพาะคู่มือที่ต้องการ แล้วตรวจ
-python -X utf8 scripts/check_docs.py
-git diff --check
-git add docs/html/how_to_modify.html docs/html/release.html
-# เพิ่มชื่อไฟล์เอกสารอื่นเฉพาะที่แก้จริง
-git diff --cached
-git commit -m &quot;docs: improve maintenance guide [skip ci]&quot;
-git push origin main</code></pre></div>
-<p>สำหรับ workflow ปัจจุบัน [skip ci] ข้ามงานที่ trigger จาก push/pull_request จึงไม่พยายามออก Release เลขเดิม ห้ามใช้วิธีนี้กับการแก้โค้ด และถ้า branch protection บังคับ PR/required checks การข้ามอาจทำให้ PR ค้าง Pending — ต้องใช้กระบวนการที่สอดคล้องกับนโยบาย repository และปรับ release trigger ก่อน ห้ามปิดการป้องกันเพื่อหลบการตรวจ</p><p>อ้างอิง <a href="https://docs.github.com/en/actions/how-tos/manage-workflow-runs/skip-workflow-runs">ข้อจำกัดของ skip instructions จาก GitHub</a></p></section>
-<section id="failure"><h2>9. ถ้า Release ไม่สำเร็จ</h2>
-<table><thead><tr><th>ปัญหา</th><th>ทำอย่างไร</th></tr></thead><tbody><tr><td>Release already exists</td><td>ใช้เลขรุ่นใหม่ทั้ง 3 จุด แล้วตรวจ/ออก release ใหม่ ไม่ลบ tag หรือเขียนทับ ZIP เดิม</td></tr><tr><td>Compile failed</td><td>เปิด Actions → job → ขั้นที่ fail → อ่าน compiler error แรก แก้ใน branch แล้วรันตัวอย่างที่เกี่ยวข้องและชุดเต็มใหม่</td></tr><tr><td>Download 404</td><td>ดูว่า asset ถูกอัปโหลดสำเร็จหรือไม่ และ root index ชี้ชื่อไฟล์/รุ่นเดียวกัน ห้ามแก้ URL ให้ชี้ Source code zip</td></tr><tr><td>Checksum mismatch</td><td>อย่าแก้ checksum โดยเดา ตรวจว่ากำลังใช้ archive/index คู่เดียวกัน หาก asset เผยแพร่แล้วให้แก้ผ่านรุ่นใหม่</td></tr><tr><td>403 ตอน publish/push index</td><td>ตรวจ Settings → Actions และสิทธิ์ workflow/token รวมถึง branch protection; ให้ผู้ดูแลปรับเฉพาะสิทธิ์ที่จำเป็น ไม่วาง personal token ในซอร์ส</td></tr><tr><td>เครือข่ายล้มเหลวก่อน publish</td><td>หากยังไม่มี release/tag และซอร์สถูกต้อง ลอง Re-run failed jobs ได้; ถ้ามี asset/release บางส่วนแล้วให้ตรวจสถานะก่อน ไม่ retry ซ้ำโดยเดา</td></tr><tr><td>push ถูกปฏิเสธหลัง bot อัปเดต index</td><td>ดึง main ล่าสุดและรวมงานให้ถูกต้อง ห้าม force push ทับ commit ของ bot</td></tr><tr><td>Arduino IDE ยังเห็นรุ่นเดิม</td><td>รอ index รีเฟรช ตรวจ URL Preferences และ version ใน raw index ก่อนติดตั้งใหม่</td></tr></tbody></table></section>
-<section id="checklist"><h2>10. เช็กลิสต์ก่อนกด Merge</h2>
-<ul class="guide-checklist"><li>เลขรุ่นใหม่ไม่ซ้ำ release เดิม และตรงกันทั้ง 3 จุด</li><li>ตัวอย่าง/README/HTML ตรงกับ API จริง</li><li>release notes และรายงานใหม่แยกผลที่ผ่านกับสิ่งที่ยังไม่ทดสอบ</li><li>ไม่มี Wi-Fi password/token จริงในไฟล์ที่จะ push</li><li>host tests, docs checks, package verification และ compile ครบผ่าน</li><li>ทดสอบระบบที่แก้บนฮาร์ดแวร์ตามความจำเป็น</li><li>ไม่แก้ root index ล่วงหน้า และไม่สร้าง tag ชนกับ workflow</li><li>หลัง merge รอ workflow สำเร็จ ตรวจ assets และทดลองติดตั้ง</li></ul></section>
-
-<footer><p>© 2026 Redbrick Robotics · <a href="how_to_modify.html">สอนแก้โค้ด</a> · <a href="release.html">เปลี่ยนเวอร์ชันและออก Release</a> · <a href="../MAINTENANCE_QUICKSTART_TH.md">เช็กลิสต์ฉบับย่อ</a></p></footer>
+<main class="main-content"><header><h1>การเผยแพร่รุ่น</h1><p>RB_Nexus 0.2.1 · ESP32-WROOM-32 · Arduino-ESP32 3.3.10</p></header>
+<p>เพิ่ม VERSION, library.properties และ RBNexus::version ให้ตรงกัน แล้วอัปเดตรายงานทดสอบและคู่มือ</p><ol><li>build archive จาก upstream ที่ตรวจ SHA-256 แล้ว</li><li>ตรวจแพ็กเกจและติดตั้งผ่าน local test index</li><li>ติดตั้ง IMU และ micro-ROS dependencies จริง แล้ว compile ทุกตัวอย่าง</li><li>เผยแพร่ immutable GitHub Release พร้อม archive และ index</li><li>อัปเดต root index หลัง upload สำเร็จเท่านั้น</li></ol><p>workflow release.yml ทำขั้นตอนนี้เมื่อ push main ถ้า tag มีอยู่แล้วต้องเพิ่มเลขรุ่น ห้ามเขียนทับ archive ของรุ่นที่เผยแพร่แล้ว</p><footer><p>© 2026 Redbrick Robotics · ปรับปรุง 6 ตุลาคม 2026 · <a href="../TEST_RESULTS_0.2.1.md">ผลการตรวจสอบรุ่นนี้</a></p></footer>
 </main></body></html>
