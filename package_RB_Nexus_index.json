@@ -11,12 +11,12 @@
         {
           "name": "RB_Nexus",
           "architecture": "esp32",
-          "version": "0.2.3",
+          "version": "0.2.4",
           "category": "Contributed",
-          "url": "https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/download/v0.2.3/RB_Nexus-esp32-0.2.3.zip",
-          "archiveFileName": "RB_Nexus-esp32-0.2.3.zip",
-          "checksum": "SHA-256:cf499753f8ffb746daaf27e18698268078d1bf63b48d0b7a6bf2e9f7e427aa3c",
-          "size": "68419126",
+          "url": "https://github.com/Sakda-Oil/RB_Nexus_LIBRARY/releases/download/v0.2.4/RB_Nexus-esp32-0.2.4.zip",
+          "archiveFileName": "RB_Nexus-esp32-0.2.4.zip",
+          "checksum": "SHA-256:cf1e4fc919f7f4afbe378e07b7dbce3615ff86fe09b41cb553c287a0cf6e224d",
+          "size": "68438301",
           "boards": [
             {
               "name": "RB_Nexus"
