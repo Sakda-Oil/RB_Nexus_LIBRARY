@@ -12,7 +12,30 @@
 
 namespace {
 MPU9250 mpu;
-Adafruit_BNO08x bno(-1); // I2C soft reset; no extra GPIO required.
+// SH2 timestamps are relative to a host transfer timestamp. Adafruit BNO08x
+// 1.2.7's I2C HAL leaves that timestamp unset (zero), so successive reports can
+// have identical or backwards times even while the sensor is moving.
+// Supply a polling-time anchor BEFORE reading; a HAL with an interrupt timestamp
+// can overwrite it. SH2 still applies each report's offset within the packet.
+// This uses the vendor's single global transport and requires regular imuUpdate.
+using BNORead = int (*)(sh2_Hal_t*, uint8_t*, unsigned, uint32_t*);
+BNORead bnoRead = nullptr;
+int readBNOWithTime(sh2_Hal_t* hal, uint8_t* buffer, unsigned length, uint32_t* time) {
+  *time = hal->getTimeUs(hal);
+  return bnoRead(hal, buffer, length, time);
+}
+class TimedBNO08x : public Adafruit_BNO08x {
+public:
+  TimedBNO08x() : Adafruit_BNO08x(-1) {} // I2C soft reset; no extra GPIO.
+protected:
+  bool _init(int32_t sensorId) override {
+    if (!_HAL.read || !_HAL.getTimeUs || _HAL.read == readBNOWithTime) return false;
+    bnoRead = _HAL.read; // begin_I2C restores the vendor HAL on every begin.
+    _HAL.read = readBNOWithTime;
+    return Adafruit_BNO08x::_init(sensorId);
+  }
+};
+TimedBNO08x bno;
 constexpr uint8_t ACCEL_VALID = 1, GYRO_VALID = 2, ORIENTATION_VALID = 4;
 
 bool probe(uint8_t address) {
@@ -215,7 +238,7 @@ void RBNexusBoard::receiveBNOEvent(sh2_SensorEvent_t* raw) {
         _gyro[2] = event.un.gyroscope.z;
         _imuGyroTime = now; _imuReports |= GYRO_VALID;
         ++_imuGyroSamples;
-        // Use sensor timestamps so queued reports do not share a host receive time.
+        // SH2 timestamps retain report offsets within the timed I2C transfer.
         updateRotationZ(_gyro[2], uint32_t(event.timestamp));
         break;
       case SH2_MAGNETIC_FIELD_CALIBRATED:

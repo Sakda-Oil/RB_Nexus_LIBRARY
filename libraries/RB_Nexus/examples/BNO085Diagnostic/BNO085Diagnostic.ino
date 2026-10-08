@@ -11,6 +11,7 @@ void setup() {
     return;
   }
   Serial.println("BNO085 connected. Send 0 to zero Z. With +Z up: right +, left -.");
+  Serial.println("Rotate flat by about 90 degrees. Z is accumulated degrees; gyro is rad/s; yaw is fused heading.");
 }
 
 void loop() {
@@ -24,6 +25,8 @@ void loop() {
       (unsigned long)samples, (unsigned long)(samples-previousSamples), RB.gyroZ(), RB.imuRotationZ(),
       RB.imuDataFresh(), RB.imuRotationZFresh(), RB.imuOrientationFresh());
     previousSamples = samples;
+    Serial.printf("gyro XYZ=%.4f, %.4f, %.4f rad/s; fused yaw=%.2f deg\n",
+      RB.gyroX(), RB.gyroY(), RB.gyroZ(), RB.yaw());
     if (!RB.isIMUAvailable()) Serial.println("BNO085 unavailable; check startup messages and connection.");
     else if (!RB.imuRotationZFresh()) Serial.println("No fresh gyro reports; initialized does not mean data is arriving.");
   }

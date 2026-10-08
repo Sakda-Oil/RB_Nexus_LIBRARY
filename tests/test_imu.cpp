@@ -137,4 +137,48 @@ int main() {
   fakeBNOResetOnService=true; RB.imuUpdate();
   assert(!RB.imuDataFresh() && !RB.imuRotationZFresh());
   puts("PASS BNO batched reports retain all gyro samples, decoding errors and in-service resets");
+
+  fakeBNORelativeTime=true;
+  fakeNow=10000;
+  assert(RB.imuBegin(RBIMUType::BNO085));
+  g.un.gyroscope.z=-90*DEG_TO_RAD;
+  // Real I2C HAL supplies no timestamp. SH2 report offsets alone repeat each
+  // packet, so the old driver counted gyro samples but accumulated zero degrees.
+  g.timestamp=uint32_t(-5000);
+  for (int i=0; i<=50; ++i) {
+    fakeEvents={a,g,q}; RB.imuUpdate(); fakeNow+=20;
+  }
+  assert(RB.imuGyroSampleCount()==51);
+  assert(fabsf(RB.angleZ()-90)<0.02f);
+  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==51);
+  puts("PASS BNO I2C missing transfer timestamp: right turn reaches +90 degrees");
+
+  assert(RB.imuBegin(RBIMUType::BNO085)); // Reinstall HAL without recursive wrapping.
+  g.un.gyroscope.z=90*DEG_TO_RAD;
+  fakeNow=4294960; // Host microsecond clock wraps during the next packet.
+  for (int i=0; i<26; ++i) {
+    g.timestamp=uint32_t(-20000); fakeEvents.push_back(g);
+    g.timestamp=0; fakeEvents.push_back(g);
+    fakeEvents.push_back(q); RB.imuUpdate(); fakeNow+=40;
+  }
+  assert(RB.imuGyroSampleCount()==52);
+  assert(fabsf(RB.angleZ()+91.8f)<0.03f); // 51 * 20 ms, left negative.
+  float before=RB.angleZ();
+  fakeBNOResetOnService=true; RB.imuUpdate();
+  assert(!RB.imuRotationZFresh());
+  fakeNow+=1000; fakeEvents={g}; RB.imuUpdate();
+  assert(fabsf(RB.angleZ()-before)<0.001f); // Do not integrate across reset.
+  fakeNow+=20; fakeEvents={g}; RB.imuUpdate();
+  assert(fabsf(RB.angleZ()-(before-1.8f))<0.02f);
+  puts("PASS BNO packet-relative sample spacing, clock wrap, rebegin and reset");
+
+  // Future vendor HALs may provide an interrupt timestamp; retain that value.
+  fakeBNOVendorTime=true;
+  assert(RB.imuBegin(RBIMUType::BNO085));
+  for (int i=0; i<=50; ++i) {
+    fakeBNOVendorAnchor=1000000+i*20000;
+    fakeEvents={g}; RB.imuUpdate(); fakeNow+=10; // Different host poll spacing.
+  }
+  assert(fabsf(RB.angleZ()+90)<0.02f);
+  puts("PASS BNO vendor-provided transfer timestamps take precedence");
 }

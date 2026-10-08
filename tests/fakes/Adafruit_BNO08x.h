@@ -21,6 +21,18 @@ inline void* fakeSensorCookie = nullptr;
 inline bool fakeBNODecodeOK = true, fakeBNOResetOnService = false;
 inline bool fakeBNOFound=false, fakeBNOReset=false, fakeBNOEnable=true;
 inline std::vector<sh2_SensorValue_t> fakeEvents;
+struct sh2_Hal_t {
+  int (*read)(sh2_Hal_t*, uint8_t*, unsigned, uint32_t*);
+  uint32_t (*getTimeUs)(sh2_Hal_t*);
+};
+inline sh2_Hal_t* fakeBNOHal = nullptr;
+inline bool fakeBNORelativeTime = false, fakeBNOVendorTime = false;
+inline uint32_t fakeBNOVendorAnchor = 0;
+inline int fakeBNORead(sh2_Hal_t*, uint8_t*, unsigned, uint32_t* t_us) {
+  // Adafruit 1.2.7 leaves t_us untouched on I2C reads.
+  if (fakeBNOVendorTime) *t_us = fakeBNOVendorAnchor;
+  return fakeEvents.empty() ? 0 : 1;
+}
 inline int sh2_setSensorCallback(sh2_SensorCallback_t* callback, void* cookie) {
   fakeSensorCallback = callback; fakeSensorCookie = cookie; return SH2_OK;
 }
@@ -30,10 +42,14 @@ inline int sh2_decodeSensorEvent(sh2_SensorValue_t* value, const sh2_SensorEvent
 }
 inline void sh2_service() {
   if (fakeBNOResetOnService) { fakeBNOReset=true; fakeBNOResetOnService=false; return; }
+  uint32_t anchor = 0; // shtp_service initializes the HAL timestamp to zero.
+  if (fakeBNORelativeTime && !fakeBNOHal->read(fakeBNOHal, nullptr, 0, &anchor)) return;
   // One SHTP transfer can deliver multiple reports to the callback.
   const auto packet = fakeEvents; fakeEvents.clear();
   for (const auto& value : packet) {
     sh2_SensorEvent_t event{value};
+    // SH2 adds each report's signed packet-relative time to the HAL anchor.
+    if (fakeBNORelativeTime) event.value.timestamp = uint32_t(anchor + uint32_t(value.timestamp));
     if (fakeSensorCallback) fakeSensorCallback(fakeSensorCookie, &event);
   }
 }
@@ -41,7 +57,10 @@ class Adafruit_BNO08x {
 public:
   explicit Adafruit_BNO08x(int) {}
   bool begin_I2C(uint8_t, FakeWire*) {
-    fakeSensorCallback=nullptr; fakeSensorCookie=nullptr; return fakeBNOFound;
+    fakeSensorCallback=nullptr; fakeSensorCookie=nullptr;
+    _HAL.read = fakeBNORead;
+    _HAL.getTimeUs = [](sh2_Hal_t*) { return uint32_t(micros()); };
+    return fakeBNOFound && _init(0);
   }
   bool enableReport(int, uint32_t) { return fakeBNOEnable; }
   bool wasReset() { bool r=fakeBNOReset; fakeBNOReset=false; return r; }
@@ -50,4 +69,7 @@ public:
     // Match the vendor wrapper: the final report overwrites earlier reports.
     *event=fakeEvents.back(); fakeEvents.clear(); return true;
   }
+protected:
+  virtual bool _init(int32_t) { fakeBNOHal = &_HAL; return true; }
+  sh2_Hal_t _HAL{};
 };

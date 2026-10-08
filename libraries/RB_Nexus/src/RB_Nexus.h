@@ -17,7 +17,7 @@
 
 namespace RBNexus {
 constexpr const char* name = "RB_Nexus";
-constexpr const char* version = "0.2.4";
+constexpr const char* version = "0.2.5";
 constexpr bool peripheralPinMapAvailable = true;
 }
 
