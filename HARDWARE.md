@@ -46,3 +46,11 @@ Hardware information and verified peripheral pin mapping for **RB Nexus V0.1**:
 - Relative Z rotation integrates gyro data in degrees on all supported IMUs. Keep Z vertical for planar turn measurements, calibrate while stationary, and expect drift; this is not absolute heading.
 - With sensor +Z pointing up, imuRotationZ() is clockwise/right positive and counter-clockwise/left negative. Raw gyro and fused orientation retain their native convention.
 - BNO085 reports are consumed individually through the SH2 callback, including multiple reports in one SHTP transfer. Its internally calibrated gyro does not need the example's manual MPU bias routine.
+
+## Distance sensors in software 0.2.4
+
+- HC-SR04: TRIG GPIO26, ECHO GPIO27 through a 5V-to-3.3V level divider; 5V supply and common ground. Example divider: 2.2k ohm from ECHO to GPIO, 3.3k ohm from GPIO to GND.
+- Digital IR obstacle detector: OUT GPIO4; verify its supply and output voltage. Active-low is the default; active-high is configurable. It does not measure centimeters.
+- Sharp GP2Y0A21YK0F: analog OUT to A1 (MCP3208 channel 0), suitable 5V supply, common ground. A1's supply pin is 3.3V and must not be used to supply this 5V sensor. ADC input must stay within 0..3.3V.
+- Analog distance conversion starts with an approximate datasheet curve for 10..80cm. Calibrate the actual sensor; below 10cm the non-monotonic curve can falsely indicate a farther target.
+- Software validation does not replace physical sensor, voltage, distance or collision-stop testing.

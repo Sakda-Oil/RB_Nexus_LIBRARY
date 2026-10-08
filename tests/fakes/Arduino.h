@@ -17,6 +17,10 @@ inline uint32_t fakeNow = 100;
 inline int fakePins[40] = {};
 inline uint32_t fakeFreq[40] = {}, fakeDuty[40] = {};
 inline uint8_t fakeResolution[40] = {};
+inline uint32_t fakeEchoUs = 0, fakePulseTimeout = 0, fakePulseCalls = 0;
+inline unsigned long pulseIn(uint8_t, uint8_t, unsigned long timeout) {
+  fakePulseTimeout = timeout; ++fakePulseCalls; return fakeEchoUs;
+}
 inline uint32_t millis() { return fakeNow; }
 inline uint32_t micros() { return fakeNow * 1000u; }
 inline void delay(uint32_t ms) { fakeNow += ms; }

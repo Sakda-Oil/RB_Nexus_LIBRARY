@@ -48,7 +48,7 @@ void setup() {
       Serial.printf("Gyro bias calibrated: %.4f rad/s (%u samples)\n", sum / count, count);
     } else { Serial.println("Not enough new gyro samples. Check sensor and restart."); return; }
   }
-  RB.imuResetRotationZ();
+  RB.zeroZ();
   ready = true;
   Serial.println("Relative Z rotation in degrees: Turn Right (+), Turn Left (-). Send '0' to zero.");
   Serial.println("Keep sensor +Z pointing UP. This is gyro integration; drift is possible on all sensors.");
@@ -57,12 +57,12 @@ void setup() {
 void loop() {
   RB.update();
   if (!ready) return;
-  if (Serial.available() && Serial.read() == '0') RB.imuResetRotationZ();
+  if (Serial.available() && Serial.read() == '0') RB.zeroZ();
   static uint32_t last = 0;
   if (millis() - last >= 100) {
     last = millis();
     if (RB.imuRotationZFresh()) {
-      Serial.printf("Z rotation: %.2f deg\n", RB.imuRotationZ());
+      Serial.printf("Z rotation: %.2f deg\n", RB.angleZ());
     } else Serial.println("Waiting for fresh gyro data");
   }
 }

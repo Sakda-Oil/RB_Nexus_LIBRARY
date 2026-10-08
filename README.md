@@ -87,7 +87,44 @@ RB.emergencyStop();   // latch จนเรียก clearEmergencyStop()
 
 กำหนดค่าเริ่มต้น CAN ให้ตรงวงจร (TX=GPIO17, RX=GPIO16) และให้ SelfTest แสดงว่ากำหนดขาแล้วโดยไม่อ้างว่าฮาร์ดแวร์ผ่านการทดสอบ
 
-## การทดสอบ
+## คำสั่งสั้นและเซนเซอร์วัดระยะ (0.2.4)
+
+```cpp
+RB.motorPercent(4, 30); // M4 เดินหน้า 30%; -30 คือถอยหลัง
+RB.stop(4);            // หยุด M4 พร้อมปิด PID
+RB.stopAll();          // หยุดมอเตอร์ทุกช่อง
+RB.led(true);          // เปิด LED บนบอร์ด
+RB.servo(8, 90);       // เซอร์โวช่องแรก (PCA9685 CH8) ไป 90 องศา
+// RB.angleZ() / RB.zeroZ() : อ่านมุม Z / ตั้งศูนย์ใหม่
+```
+
+ชื่อเดิมยังใช้ได้ทั้งหมด `motor()`/`motorSet()` ใช้ช่วง -255..255 ส่วน
+`motorPercent()`/`motorSetPercent()` ใช้ -100..100 เปอร์เซ็นต์กำลัง ไม่ใช่ RPM
+
+เพิ่มตัวช่วยเซนเซอร์ที่ใช้เพียง `#include <RB_Nexus.h>`:
+
+| เซนเซอร์ | ประกาศอุปกรณ์ | อ่านค่า |
+|---|---|---|
+| HC-SR04 | `RBUltrasonicSensor front(26, 27);` | `front.cm()` |
+| Sharp GP2Y0A21YK0F 10–80 cm | `RBIRDistanceSensor front(1);` (A1) | `front.cm()` / `front.volts()` |
+| IR ดิจิทัล active LOW | `RBIRObstacleSensor front(4);` | `front.detected()` |
+
+เรียก `RB.begin()` และ `front.begin()` ใน setup() ก่อนใช้ อ่านอัลตราโซนิกห่างกันอย่างน้อย
+60 ms (ตัวอย่างใช้ 100 ms) และตรวจ `isfinite(cm)` ก่อนใช้ระยะ: ค่าอ่านไม่ได้เป็น `NaN`
+พร้อม `statusText()` ไม่ใช่ 0 cm ส่วน IR ดิจิทัลให้เพียงพบ/ไม่พบ ไม่แปลงเป็นระยะ
+ชื่อเต็ม `readCentimeters()`, `readVoltage()`, `isObstacleDetected()` ยังใช้ได้
+
+HC-SR04 ต้องใช้ไฟ 5V, GND ร่วม และลด ECHO ก่อนเข้า ESP32 เช่น ECHO → 2.2kΩ → GPIO27
+และ GPIO27 → 3.3kΩ → GND ห้ามต่อ ECHO 5V เข้าขา ESP32 ตรง ๆ
+Sharp ใช้ไฟเลี้ยงที่เหมาะสมแยกจากขั้ว A1 ที่จ่าย 3.3V และสัญญาณ ADC ต้องไม่เกิน 3.3V
+กราฟเริ่มต้นเป็นค่าประมาณ ต้องใช้ `setCalibration()` เทียบกับไม้บรรทัดสำหรับงานจริง
+ระยะต่ำกว่า 10 cm ของ Sharp อาจให้ค่าเหมือนอยู่ไกล จึงไม่เหมาะใช้เดี่ยว ๆ เพื่อรับประกันการหยุดชน
+
+ตัวอย่างใหม่: **DistanceUltrasonic**, **DistanceIRObstacle**, **DistanceIRAnalog**,
+**DistanceIRCalibration**, **DistanceWarningLED**, **MotorBeginner**
+ตัวอย่าง MotorBeginner รอคำสั่ง Serial ก่อนเคลื่อนที่ และหยุดเองใน 1 วินาที
+
+## การทดสอบซอฟต์แวร์
 
 ```sh
 python scripts/install_dependencies.py --config-file arduino-cli.yaml

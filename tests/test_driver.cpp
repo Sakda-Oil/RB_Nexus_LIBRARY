@@ -36,8 +36,18 @@ int main() {
   RB.motorSet(1,256); assert(on(0)==4096);
   RB.motorSet(1,-32768); assert(on(1)==4096);
   puts("PASS manual override, zero RPM and speed saturation");
+  RB.motorSetPercent(1,100); assert(on(0)==4096);
+  RB.motorSetPercent(1,-100); assert(on(1)==4096);
+  RB.motorSetPercent(1,32767); assert(on(0)==4096);
+  RB.motorSetPercent(1,-32768); assert(on(1)==4096);
+  RB.motorSetPercent(1,0); assert(off(0)==4096 && off(1)==4096);
+  RB.motorSetRPM(1,100);
+  RB.motorPercent(1,30); assert(off(0)>1200 && off(0)<1240 && !RB.isMotorPIDEnabled(1));
+  RB.stop(1); fakeNow+=60; RB.update(); assert(off(0)==4096 && off(1)==4096);
+  puts("PASS signed motor percentage saturates safely including integer extremes");
 
   RB.emergencyStop();
+  RB.motorPercent(1,100); assert(off(0)==4096 && off(1)==4096);
   RB_Nexus.motorSet(1,200); RB.motorBrake(1);
   assert(off(0)==4096 && off(1)==4096);
   RB.motorSetRPM(1,200); assert(!RB.isMotorPIDEnabled(1));

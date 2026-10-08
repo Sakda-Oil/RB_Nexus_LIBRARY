@@ -9,6 +9,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include "RB_Nexus_Pins.h"
+#include "RB_Nexus_Distance.h"
 
 #if !defined(ARDUINO_ARCH_ESP32)
 #error "RB_Nexus requires an ESP32 board selected in Tools > Board."
@@ -16,7 +17,7 @@
 
 namespace RBNexus {
 constexpr const char* name = "RB_Nexus";
-constexpr const char* version = "0.2.3";
+constexpr const char* version = "0.2.4";
 constexpr bool peripheralPinMapAvailable = true;
 }
 
@@ -50,6 +51,7 @@ public:
   // --- Status LED ---
   void setLED(bool on);
   void toggleLED();
+  void led(bool on) { setLED(on); }
 
   // --- Digital I/O Helpers ---
   int  digitalRead(uint8_t pin);
@@ -81,11 +83,20 @@ public:
   // --- DC Motor Control (Channels 1 to 4) ---
   // speed: -255 to +255 (Standard Robotics Scale)
   void motorSet(uint8_t motorId, int16_t speed);
+  // Signed percentage (-100..100); an output level, not a measured RPM.
+  void motorSetPercent(uint8_t motorId, int16_t percent) {
+    if (percent > 100) percent = 100;
+    if (percent < -100) percent = -100;
+    motorSet(motorId, (int32_t(percent) * 255) / 100);
+  }
   void motorForward(uint8_t motorId, uint8_t speed = 200);
   void motorBackward(uint8_t motorId, uint8_t speed = 200);
   void motorStop(uint8_t motorId);
   void motorBrake(uint8_t motorId);
   void motorStopAll();
+  void motorPercent(uint8_t motorId, int16_t percent) { motorSetPercent(motorId, percent); }
+  void stop(uint8_t motorId) { motorStop(motorId); }
+  void stopAll() { motorStopAll(); }
   void emergencyStop();
   bool isEmergencyStopped() const { return _emergencyStopActive; }
   void clearEmergencyStop() { _emergencyStopActive = false; }
@@ -158,6 +169,8 @@ public:
   // Relative gyro degrees: right/clockwise positive when sensor +Z points up.
   // This convention applies only to imuRotationZ(), not raw gyro, Euler or ROS data.
   float imuRotationZ() const;
+  float angleZ() const { return imuRotationZ(); }
+  bool zeroZ() { return imuResetRotationZ(); }
   bool imuRotationZFresh(uint32_t maxAgeMs = 500) const;
   bool imuResetRotationZ(float degrees = 0.0f);
   bool imuSetGyroZBias(float radiansPerSecond); // Measure while stationary.

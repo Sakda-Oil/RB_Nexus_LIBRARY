@@ -66,6 +66,7 @@ void setup() {
 }
 
 void loop() {
+  RB.update();
   if (Serial.available()) {
     char c = Serial.read();
     if (c >= '1' && c <= '4') {
@@ -74,11 +75,11 @@ void loop() {
     } else if (c == 'f' || c == 'F') {
       autoTestRunning = false;
       Serial.printf("Motor M%d -> FORWARD (%d%%)\n", currentMotor, testSpeed);
-      RB.motor(currentMotor, testSpeed);
+      RB.motorSetPercent(currentMotor, testSpeed);
     } else if (c == 'b' || c == 'B') {
       autoTestRunning = false;
       Serial.printf("Motor M%d -> BACKWARD (-%d%%)\n", currentMotor, testSpeed);
-      RB.motor(currentMotor, -testSpeed);
+      RB.motorSetPercent(currentMotor, -testSpeed);
     } else if (c == 's' || c == 'S') {
       autoTestRunning = false;
       Serial.printf("Motor M%d -> STOP\n", currentMotor);
@@ -118,7 +119,7 @@ void loop() {
 
       if (m <= 4) {
         Serial.printf("[AUTO TEST] M%d: %s (%d%%)\n", m, forward ? "FORWARD" : "BACKWARD", testSpeed);
-        RB.motor(m, forward ? testSpeed : -testSpeed);
+        RB.motorSetPercent(m, forward ? testSpeed : -testSpeed);
         RB.toggleLED();
         autoTestStep++;
       } else {
