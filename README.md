@@ -1,4 +1,4 @@
-# RB_Nexus 0.2.5
+# RB_Nexus 0.3.0
 
 Arduino board package และไลบรารีสำหรับ RB Nexus V0.1 (ESP32-WROOM-32) บน Arduino-ESP32 core 3.3.10
 
