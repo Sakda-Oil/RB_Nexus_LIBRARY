@@ -25,7 +25,7 @@ bool RBIRObstacleSensor::begin() {
   if (_ready) ::pinMode(_pin, INPUT);
   return _ready;
 }
-bool RBIRObstacleSensor::isObstacleDetected() const {
+bool RBIRObstacleSensor::detected() const {
   return _ready && (::digitalRead(_pin) == (_activeLow ? LOW : HIGH));
 }
 
@@ -40,7 +40,7 @@ bool RBUltrasonicSensor::begin() {
   }
   return _ready;
 }
-float RBUltrasonicSensor::readCentimeters() {
+float RBUltrasonicSensor::cm() {
   if (!_ready) { _status = RBDistanceStatus::NotInitialized; return NAN; }
   const uint32_t now = millis();
   if (_hasPing && uint32_t(now - _lastPing) < 60) {
@@ -88,13 +88,13 @@ bool RBIRDistanceSensor::begin() {
   // Voltage can be read for calibration even for a Custom sensor without a table.
   return _ready;
 }
-float RBIRDistanceSensor::readVoltage() {
+float RBIRDistanceSensor::volts() {
   if (!_ready) { _status = RBDistanceStatus::NotInitialized; return NAN; }
   _status = RBDistanceStatus::OK;
-  return RB.analogReadAverage(_channel, 8) * (3.3f / 4095.0f);
+  return RB.analogAverage(_channel, 8) * (3.3f / 4095.0f);
 }
-float RBIRDistanceSensor::readCentimeters() {
-  const float voltage = readVoltage();
+float RBIRDistanceSensor::cm() {
+  const float voltage = volts();
   if (!isfinite(voltage)) return NAN;
   if (_count < 2) { _status = RBDistanceStatus::InvalidCalibration; return NAN; }
   if (voltage > _points[0].volts || voltage < _points[_count-1].volts) {

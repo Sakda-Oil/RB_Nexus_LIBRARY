@@ -9,8 +9,7 @@ public:
       : _pin(pin), _activeLow(activeLow) {}
   bool begin();
   bool isReady() const { return _ready; }
-  bool isObstacleDetected() const;
-  bool detected() const { return isObstacleDetected(); }
+  bool detected() const; // true = obstacle in front
 private:
   uint8_t _pin;
   bool _activeLow, _ready = false;
@@ -29,8 +28,7 @@ public:
   bool begin();
   bool isReady() const { return _ready; }
   // Returns NAN on failure; blocks for at most approximately 30 ms per ping.
-  float readCentimeters();
-  float cm() { return readCentimeters(); }
+  float cm();
   RBDistanceStatus status() const { return _status; }
   const char* statusText() const { return distanceStatusText(_status); }
 private:
@@ -49,11 +47,9 @@ public:
   explicit RBIRDistanceSensor(uint8_t analogChannel, RBIRModel model = RBIRModel::Sharp10To80CM);
   bool begin(); // Call RB.begin() first to initialize the ADC bus.
   bool isReady() const { return _ready; }
-  float readVoltage();
-  float volts() { return readVoltage(); }
+  float volts();
   // Approximate Sharp GP2Y0A21YK0F curve; calibrate against a ruler for your sensor.
-  float readCentimeters();
-  float cm() { return readCentimeters(); }
+  float cm();
   // Copies 2..12 points: distance increases, voltage decreases, voltage <=3.3 V.
   // Failed changes leave the last valid calibration intact.
   bool setCalibration(const RBIRCalibrationPoint* points, size_t count);

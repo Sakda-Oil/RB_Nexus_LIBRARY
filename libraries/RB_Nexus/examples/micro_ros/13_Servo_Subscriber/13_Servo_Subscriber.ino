@@ -1,38 +1,30 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_subscription_t subscriber;
-std_msgs__msg__Int16 msg;
-rclc_executor_t executor;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
 
-void servo_callback(const void* msgin) {
-  const std_msgs__msg__Int16* msg = (const std_msgs__msg__Int16*)msgin;
-  // Servo 1 is mapped to PCA9685 Channel 8 (0 - 180 degrees)
-  RB.servoWrite(8, (uint8_t)constrain(msg->data, 0, 180));
+// Servo 1 (PCA9685 CH8) angle 0..180 on /rb_nexus/servo/1/cmd (std_msgs/Int16).
+//   ros2 topic pub --once /rb_nexus/servo/1/cmd std_msgs/msg/Int16 "{data: 45}"
+rcl_subscription_t servoSub;
+std_msgs__msg__Int16 servoCommand;
+
+void onServo(const void* message) {
+  RB.servoAngle(1, constrain(((const std_msgs__msg__Int16*)message)->data, 0, 180));
+}
+
+bool createROS() {
+  return RBROS.subscriber(servoSub, RB_MSG(std_msgs, Int16), RB_TOPIC_SERVO_1_CMD, &servoCommand, onServo);
 }
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-  RB.servoAttach(8);
-
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_servo_sub", "", &support));
-  rbROSCheck(rclc_subscription_init_default(
-    &subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
-    RB_TOPIC_SERVO_1_CMD));
-
-  rbROSCheck(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &subscriber, &msg, &servo_callback, ON_NEW_DATA));
+  RB.servoAngle(1, 90);
+  RBROS.begin("rb_nexus_servo_sub", createROS);
 }
 
 void loop() {
   RB.update();
-  rclc_executor_spin_some(&executor, 1000000);
+  RBROS.spin();
 }

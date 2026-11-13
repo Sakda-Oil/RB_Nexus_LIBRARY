@@ -62,7 +62,7 @@ void setup() {
 
   // 4. I2C Bus & PCA9685
   bool boardOk = RB.begin();
-  if (boardOk && RB.isPCA9685Connected()) {
+  if (boardOk && RB.pcaReady()) {
     printStatus("I2C (PCA9685)", "PASS (0x40 Detected)");
   } else {
     printStatus("I2C (PCA9685)", "NOT DETECTED (Check 6-24V power)");
@@ -70,7 +70,7 @@ void setup() {
 
   // 5. SPI Bus & MCP3208
   // ทดสอบอ่าน MCP3208 Channel 1 (ต้องอยู่ในช่วง 0-4095)
-  uint16_t adcTest = RB.analogRead(1);
+  uint16_t adcTest = RB.analogRaw(1);
   if (adcTest <= 4095) {
     char adcBuf[32];
     snprintf(adcBuf, sizeof(adcBuf), "PASS (A1 raw: %u)", adcTest);
@@ -87,7 +87,7 @@ void setup() {
   bool imuOk = RB.imuBegin();
   if (imuOk) {
     char imuBuf[32];
-    snprintf(imuBuf, sizeof(imuBuf), "PASS (%s)", RB.imuModelName());
+    snprintf(imuBuf, sizeof(imuBuf), "PASS (%s)", RB.imuName());
     printStatus("IMU", imuBuf);
   } else {
     printStatus("IMU", "NOT DETECTED (Connector unpopulated)");
@@ -112,11 +112,11 @@ void setup() {
   Serial.println("Self Test completed. Run FullBoardTest for manual QC.");
   Serial.println("================================================\n");
 
-  RB.setLED(true);
+  RB.led(true);
 }
 
 void loop() {
   RB.update();
-  RB.toggleLED();
+  RB.ledToggle();
   delay(1000);
 }

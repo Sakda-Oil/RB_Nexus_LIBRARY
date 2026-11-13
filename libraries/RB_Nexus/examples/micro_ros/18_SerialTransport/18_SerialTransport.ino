@@ -1,38 +1,32 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-// micro-ROS Serial Transport via USB-UART (CH340) at 115200 baud
-rcl_publisher_t publisher;
-std_msgs__msg__Int32 msg;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// micro-ROS over USB Serial (CH340) with an explicit baud rate.
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The status LED is ON while connected and OFF while waiting for the agent.
+// Do not print to Serial: it carries ROS data.
+rcl_publisher_t counterPub;
+std_msgs__msg__Int32 counter;
+
+bool createROS() {
+  return RBROS.publisher(counterPub, RB_MSG(std_msgs, Int32), "/rb_nexus/serial_test");
+}
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-
-  // Set default Serial transport
-  RBMicroROS.beginSerial();
-
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_serial_node", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/rb_nexus/serial_test"));
-
-  msg.data = 0;
+  RBROS.useSerial(115200);
+  RBROS.begin("rb_nexus_serial_node", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 1000) {
-    lastPub = millis();
-    msg.data++;
-    rcl_publish(&publisher, &msg, NULL);
-    RB.toggleLED();
+  RBROS.spin();
+  RB.led(RBROS.connected());
+
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 1000) {
+    last = millis();
+    counter.data++;
+    RBROS.publish(counterPub, &counter);
   }
 }

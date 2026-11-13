@@ -1,39 +1,35 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_publisher_t publisher;
-sensor_msgs__msg__Imu msg;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
+
+// Publishes raw IMU data (accel m/s^2, gyro rad/s) on /rb_nexus/imu at 50 Hz.
+rcl_publisher_t imuPub;
+sensor_msgs__msg__Imu imu;
+char imuFrame[] = "imu_link";
+
+bool createROS() {
+  return RBROS.publisher(imuPub, RB_MSG(sensor_msgs, Imu), RB_TOPIC_IMU_RAW);
+}
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
   RB.imuBegin();
-
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_imu_pub", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-    RB_TOPIC_IMU_RAW));
-
-  static char frame_id[] = "imu_link";
-  msg.header.frame_id.data = frame_id;
-  msg.header.frame_id.size = strlen(frame_id);
-  msg.header.frame_id.capacity = sizeof(frame_id);
-  rmw_uros_sync_session(1000);
+  imu.header.frame_id.data = imuFrame;
+  imu.header.frame_id.size = sizeof(imuFrame) - 1;
+  imu.header.frame_id.capacity = sizeof(imuFrame);
+  RBROS.begin("rb_nexus_imu_pub", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 20) { // 50 Hz
-    lastPub = millis();
-    if (!rbFillImuMessage(msg)) return;
-    rcl_publish(&publisher, &msg, NULL);
+  RBROS.spin();
+
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 20) {
+    last = millis();
+    if (RBROS.fillImu(imu)) RBROS.publish(imuPub, &imu);
   }
 }

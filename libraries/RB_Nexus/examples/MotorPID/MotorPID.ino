@@ -16,10 +16,10 @@ void setup() {
   RB.encoderSetPPR(TARGET_MOTOR, 330); // 330 ticks ต่อรอบมอเตอร์
 
   // ตั้งค่าพารามิเตอร์ PID (Kp, Ki, Kd)
-  RB.motorSetPID(TARGET_MOTOR, 1.5f, 0.4f, 0.05f);
+  RB.motorPID(TARGET_MOTOR, 1.5f, 0.4f, 0.05f);
 
   // กำหนดความเร็วเป้าหมาย และเปิดระบบ PID
-  RB.motorSetRPM(TARGET_MOTOR, targetRPM);
+  RB.motorRPM(TARGET_MOTOR, targetRPM);
 
   Serial.println("=========================================");
   Serial.println("RB_Nexus - Closed-Loop PID Motor Speed Control");
@@ -38,15 +38,15 @@ void loop() {
     char c = Serial.read();
     if (c == '+') {
       targetRPM += 20.0f;
-      RB.motorSetRPM(TARGET_MOTOR, targetRPM);
+      RB.motorRPM(TARGET_MOTOR, targetRPM);
       Serial.printf("New Target RPM: %.1f\n", targetRPM);
     } else if (c == '-') {
       targetRPM -= 20.0f;
       if (targetRPM < 0.0f) targetRPM = 0.0f;
-      RB.motorSetRPM(TARGET_MOTOR, targetRPM);
+      RB.motorRPM(TARGET_MOTOR, targetRPM);
       Serial.printf("New Target RPM: %.1f\n", targetRPM);
     } else if (c == 's' || c == 'S') {
-      RB.motorPIDDisable(TARGET_MOTOR);
+      RB.motorStop(TARGET_MOTOR);
       Serial.println("PID Disabled. Motor Stopped.");
     }
   }
@@ -55,9 +55,9 @@ void loop() {
   if (millis() - lastPrint >= 200) {
     lastPrint = millis();
     float currentRPM = RB.encoderRPM(TARGET_MOTOR);
-    int32_t ticks = RB.encoderRead(TARGET_MOTOR);
+    int32_t ticks = RB.encoderTicks(TARGET_MOTOR);
     Serial.printf("Target: %6.1f RPM | Actual: %6.1f RPM | Ticks: %8ld\n",
                   targetRPM, currentRPM, ticks);
-    RB.toggleLED();
+    RB.ledToggle();
   }
 }

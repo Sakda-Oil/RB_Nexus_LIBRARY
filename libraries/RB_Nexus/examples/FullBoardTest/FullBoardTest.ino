@@ -8,7 +8,7 @@
 //   2. Digital I/O (Pins 4, 12, 14, 26, 27)
 //   3. Encoders (ENC1, ENC2, ENC3, ENC4)
 //   4. PCA9685 DC Motors (M1 - M4)
-//   5. PCA9685 Servos (CH8 - CH15)
+//   5. PCA9685 Servos 1-8 (CH8 - CH15)
 //   6. MCP3208 12-bit SPI ADC (CH1 - CH8)
 //   7. I2C Bus Scanner
 // =============================================================================
@@ -39,7 +39,7 @@ void printMainMenu() {
   Serial.println("  [4] Monitor Encoders (ENC1 - ENC4 Live Ticks)");
   Serial.println("  [5] Monitor Analog Inputs (MCP3208 CH1 - CH8)");
   Serial.println("  [6] Test DC Motors (M1 -> M4 Forward/Reverse Sequence)");
-  Serial.println("  [7] Test Servos (Sweep CH8 - CH15: 0 -> 90 -> 180 deg)");
+  Serial.println("  [7] Test Servos (Sweep servo 1 - 8: 0 -> 90 -> 180 deg)");
   Serial.println("  [8] Scan I2C Bus (Check PCA9685 & other connected chips)");
   Serial.println("  [d] Diagnostic: Motor Driver individual channels (CH0-CH7)");
   Serial.println("  [s] STOP / Clear all outputs");
@@ -54,7 +54,7 @@ void setup() {
   bool pcaOk = RB.begin();
   RB.encoderBegin();
 
-  Serial.println("\nInitializing RB_Nexus...");
+  Serial.println("\nInitializing RB...");
   Serial.printf("PCA9685 I2C (0x40): %s\n", pcaOk ? "OK" : "NOT FOUND (Check 6-24V power)");
 
   printMainMenu();
@@ -63,10 +63,10 @@ void setup() {
 void testLED() {
   Serial.println("\n[1] Testing Status LED (GPIO 2)...");
   for (int i = 0; i < 6; ++i) {
-    RB.setLED(i % 2 == 0);
+    RB.led(i % 2 == 0);
     delay(250);
   }
-  RB.setLED(true);
+  RB.led(true);
   Serial.println("LED test finished (LED left ON).");
 }
 
@@ -109,13 +109,13 @@ void testMotors() {
   Serial.println("\n[6] Running DC Motor Sequence (M1 to M4)...");
   for (int m = 1; m <= 4; ++m) {
     Serial.printf("  - Testing M%d FORWARD (60%%)...\n", m);
-    RB.motor(m, 60);
+    RB.motorPower(m, 60);
     delay(1000);
     RB.motorStop(m);
     delay(200);
 
     Serial.printf("  - Testing M%d BACKWARD (-60%%)...\n", m);
-    RB.motor(m, -60);
+    RB.motorPower(m, -60);
     delay(1000);
     RB.motorStop(m);
     delay(300);
@@ -124,21 +124,21 @@ void testMotors() {
 }
 
 void testServos() {
-  Serial.println("\n[7] Testing Servos CH8 to CH15...");
+  Serial.println("\n[7] Testing Servos 1 to 8...");
   Serial.println("Moving to 0 degrees...");
-  for (uint8_t ch = RB_SERVO_CH_MIN; ch <= RB_SERVO_CH_MAX; ++ch) RB.servo(ch, 0);
+  for (uint8_t s = 1; s <= RB_SERVO_COUNT; ++s) RB.servoAngle(s, 0);
   delay(1200);
 
   Serial.println("Moving to 90 degrees (Center)...");
-  for (uint8_t ch = RB_SERVO_CH_MIN; ch <= RB_SERVO_CH_MAX; ++ch) RB.servo(ch, 90);
+  for (uint8_t s = 1; s <= RB_SERVO_COUNT; ++s) RB.servoAngle(s, 90);
   delay(1200);
 
   Serial.println("Moving to 180 degrees...");
-  for (uint8_t ch = RB_SERVO_CH_MIN; ch <= RB_SERVO_CH_MAX; ++ch) RB.servo(ch, 180);
+  for (uint8_t s = 1; s <= RB_SERVO_COUNT; ++s) RB.servoAngle(s, 180);
   delay(1200);
 
   Serial.println("Moving back to 90 degrees...");
-  for (uint8_t ch = RB_SERVO_CH_MIN; ch <= RB_SERVO_CH_MAX; ++ch) RB.servo(ch, 90);
+  for (uint8_t s = 1; s <= RB_SERVO_COUNT; ++s) RB.servoAngle(s, 90);
   Serial.println("Servo test finished.");
 }
 
@@ -163,9 +163,9 @@ void testMotorDiagnostic() {
     uint8_t m = (ch / 2) + 1;
     char leg = (ch % 2 == 0) ? 'A' : 'B';
     Serial.printf("  Activating CH%d (Motor %d leg %c) at 50%%... ", ch, m, leg);
-    RB.setPWMDuty(ch, 2048);
+    RB.pcaDuty(ch, 2048);
     delay(800);
-    RB.setPWMDuty(ch, 0);
+    RB.pcaDuty(ch, 0);
     Serial.println("OFF");
     delay(150);
   }
@@ -174,11 +174,11 @@ void testMotorDiagnostic() {
 
 void stopAll() {
   currentMode = MODE_IDLE;
-  RB.motorStopAll();
+  RB.stop();
   for (int i = 0; i < NUM_DIG_PINS; ++i) {
     pinMode(DIG_PINS[i], INPUT);
   }
-  RB.setLED(false);
+  RB.led(false);
   Serial.println("\nAll outputs stopped.");
   printMainMenu();
 }
@@ -199,7 +199,7 @@ void loop() {
       case 's': case 'S': stopAll(); break;
       case 'r': case 'R':
         if (currentMode == MODE_MONITOR_ENCODERS) {
-          RB.resetAllEncoders();
+          RB.encoderResetAll();
           Serial.println("Encoders reset to 0.");
         }
         break;
@@ -217,7 +217,7 @@ void loop() {
       for (int i = 0; i < NUM_DIG_PINS; ++i) {
         digitalWrite(DIG_PINS[i], blinkState ? HIGH : LOW);
       }
-      RB.setLED(blinkState);
+      RB.led(blinkState);
       Serial.printf("Digital Out [4, 12, 14, 26, 27] = %s\n", blinkState ? "HIGH" : "LOW");
     }
   } else if (currentMode == MODE_MONITOR_DIGITAL_IN) {
@@ -233,15 +233,15 @@ void loop() {
     if (millis() - lastAction >= 300) {
       lastAction = millis();
       Serial.printf("ENC1: %6ld | ENC2: %6ld | ENC3: %6ld | ENC4: %6ld\n",
-                    RB.readEncoder(1), RB.readEncoder(2),
-                    RB.readEncoder(3), RB.readEncoder(4));
+                    RB.encoderTicks(1), RB.encoderTicks(2),
+                    RB.encoderTicks(3), RB.encoderTicks(4));
     }
   } else if (currentMode == MODE_MONITOR_ANALOG) {
     if (millis() - lastAction >= 500) {
       lastAction = millis();
       Serial.print("MCP3208 Analog: ");
       for (uint8_t ch = 1; ch <= 8; ++ch) {
-        Serial.printf("CH%d:%4u ", ch, RB.readAnalog(ch));
+        Serial.printf("CH%d:%4u ", ch, RB.analogRaw(ch));
       }
       Serial.println();
     }

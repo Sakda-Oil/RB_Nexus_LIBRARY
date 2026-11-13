@@ -39,11 +39,11 @@ void runDiagnostics() {
     uint8_t mId = (ch / 2) + 1;
     char pinType = (ch % 2 == 0) ? 'A' : 'B';
     Serial.printf("Activating CH%d (Motor %d Pin %c) at 50%% PWM... ", ch, mId, pinType);
-    RB.setPWMDuty(ch, 2048);
-    RB.setLED(true);
+    RB.pcaDuty(ch, 2048);
+    RB.led(true);
     delay(1000);
-    RB.setPWMDuty(ch, 0);
-    RB.setLED(false);
+    RB.pcaDuty(ch, 0);
+    RB.led(false);
     Serial.println("OFF");
     delay(200);
   }
@@ -61,7 +61,7 @@ void setup() {
   } else {
     Serial.println("PCA9685 I2C communication OK.");
   }
-  RB.motorStopAll();
+  RB.stop();
   printMenu();
 }
 
@@ -75,11 +75,11 @@ void loop() {
     } else if (c == 'f' || c == 'F') {
       autoTestRunning = false;
       Serial.printf("Motor M%d -> FORWARD (%d%%)\n", currentMotor, testSpeed);
-      RB.motorSetPercent(currentMotor, testSpeed);
+      RB.motorPower(currentMotor, testSpeed);
     } else if (c == 'b' || c == 'B') {
       autoTestRunning = false;
       Serial.printf("Motor M%d -> BACKWARD (-%d%%)\n", currentMotor, testSpeed);
-      RB.motorSetPercent(currentMotor, -testSpeed);
+      RB.motorPower(currentMotor, -testSpeed);
     } else if (c == 's' || c == 'S') {
       autoTestRunning = false;
       Serial.printf("Motor M%d -> STOP\n", currentMotor);
@@ -87,7 +87,7 @@ void loop() {
     } else if (c == ' ') {
       autoTestRunning = false;
       Serial.println("ALL MOTORS STOPPED.");
-      RB.motorStopAll();
+      RB.stop();
     } else if (c == '+') {
       testSpeed = min(100, testSpeed + 10);
       Serial.printf("Test speed: %d%%\n", testSpeed);
@@ -101,7 +101,7 @@ void loop() {
       Serial.println("Starting Automated Test Sequence (M1 to M4)...");
     } else if (c == 'd' || c == 'D') {
       autoTestRunning = false;
-      RB.motorStopAll();
+      RB.stop();
       runDiagnostics();
     } else if (c == 'h' || c == 'H' || c == '?') {
       printMenu();
@@ -112,20 +112,20 @@ void loop() {
   if (autoTestRunning) {
     if (millis() - autoTestTimer >= 1500) {
       autoTestTimer = millis();
-      RB.motorStopAll();
+      RB.stop();
 
       int m = (autoTestStep / 2) + 1;
       bool forward = (autoTestStep % 2 == 0);
 
       if (m <= 4) {
         Serial.printf("[AUTO TEST] M%d: %s (%d%%)\n", m, forward ? "FORWARD" : "BACKWARD", testSpeed);
-        RB.motorSetPercent(m, forward ? testSpeed : -testSpeed);
-        RB.toggleLED();
+        RB.motorPower(m, forward ? testSpeed : -testSpeed);
+        RB.ledToggle();
         autoTestStep++;
       } else {
         autoTestRunning = false;
-        RB.motorStopAll();
-        RB.setLED(false);
+        RB.stop();
+        RB.led(false);
         Serial.println("[AUTO TEST] Finished sequence. All motors stopped.");
       }
     }

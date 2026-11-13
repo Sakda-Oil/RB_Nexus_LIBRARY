@@ -1,33 +1,32 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_publisher_t publisher;
-std_msgs__msg__Int32 msg;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
+
+// Publishes a counter on /rb_nexus/counter once per second.
+rcl_publisher_t counterPub;
+std_msgs__msg__Int32 counter;
+
+bool createROS() {
+  return RBROS.publisher(counterPub, RB_MSG(std_msgs, Int32), "/rb_nexus/counter");
+}
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_publisher", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/rb_nexus/counter"));
-  msg.data = 0;
+  RBROS.begin("rb_nexus_publisher", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 1000) {
-    lastPub = millis();
-    msg.data++;
-    rcl_publish(&publisher, &msg, NULL);
-    RB.toggleLED();
+  RBROS.spin();
+
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 1000) {
+    last = millis();
+    counter.data++;
+    RBROS.publish(counterPub, &counter);
+    RB.ledToggle();
   }
 }

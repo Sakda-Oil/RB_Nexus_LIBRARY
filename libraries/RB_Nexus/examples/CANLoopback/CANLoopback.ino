@@ -45,7 +45,7 @@ void loop() {
     bool sent = RB.canSend(0x123, payload, 8);
     if (sent) {
       Serial.println("[CAN TX] Frame sent: ID 0x123, DLC 8");
-      RB.toggleLED();
+      RB.ledToggle();
     }
   }
 

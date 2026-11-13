@@ -1,34 +1,33 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_publisher_t publisher;
-std_msgs__msg__Bool msg;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
+
+// Button between D4 and GND. Publishes true while pressed, 20 Hz.
+const uint8_t BUTTON_PIN = RB_PIN_D4;
+rcl_publisher_t buttonPub;
+std_msgs__msg__Bool button;
+
+bool createROS() {
+  return RBROS.publisher(buttonPub, RB_MSG(std_msgs, Bool), RB_TOPIC_BUTTON_STATE);
+}
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-  RB.pinMode(RB_PIN_D4, INPUT_PULLUP);
-
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_button_pub", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
-    RB_TOPIC_BUTTON_STATE));
+  pinMode(BUTTON_PIN, INPUT_PULLUP);
+  RBROS.begin("rb_nexus_button_pub", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 50) { // 20 Hz
-    lastPub = millis();
-    // Invert because INPUT_PULLUP: pressed = LOW -> True
-    msg.data = (RB.digitalRead(RB_PIN_D4) == LOW);
-    rcl_publish(&publisher, &msg, NULL);
+  RBROS.spin();
+
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 50) {
+    last = millis();
+    button.data = !RB.pinRead(BUTTON_PIN); // Pressed = LOW
+    RBROS.publish(buttonPub, &button);
   }
 }

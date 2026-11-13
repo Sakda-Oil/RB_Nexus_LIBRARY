@@ -98,4 +98,6 @@ constexpr uint8_t RB_ADC_CH_MIN = 1;
 constexpr uint8_t RB_ADC_CH_MAX = 8;
 constexpr uint8_t RB_ADC_COUNT  = 8;
 
+#else
+#error "RB_Nexus: no pin map exists for this RB_NEXUS_CURRENT_REV yet. Use RB_NEXUS_REV_01."
 #endif // RB_NEXUS_REV_01

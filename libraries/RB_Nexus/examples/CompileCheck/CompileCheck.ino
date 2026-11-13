@@ -21,8 +21,8 @@ void setup() {
   Serial.println(preferences.isKey("rb_nexus"));
 
   // Check RB driver symbols
-  RB.setLED(false);
-  RB.motorStopAll();
+  RB.led(false);
+  RB.stop();
 }
 
 void loop() { delay(1000); }

@@ -1,159 +1,120 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-RBMotorCommandGuard motorCommands(500);
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
 
 // =============================================================================
-// micro-ROS AllSensors & AllActuators Example for RB_Nexus
+// All sensors and actuators in one node
 // =============================================================================
 // Publishers:
-//   - /rb_nexus/analog (MCP3208 CH1 - CH8, 20 Hz)
-//   - /rb_nexus/encoder/1 (50 Hz)
-//   - /rb_nexus/imu (IMU Acceleration & Gyro, 50 Hz)
-//   - /rb_nexus/battery (Battery voltage estimate, 1 Hz)
-//   - /rb_nexus/status (System diagnostic status, 10 Hz)
-//
+//   /rb_nexus/analog      A1..A8 raw (Int32MultiArray, 20 Hz)
+//   /rb_nexus/encoder/1   ticks (Int32, 50 Hz)
+//   /rb_nexus/imu         raw IMU (sensor_msgs/Imu, 50 Hz)
+//   /rb_nexus/battery     A8 x 11 divider (BatteryState, 1 Hz)
+//   /rb_nexus/status      1 = OK, 99 = emergency stop (Int32, 1 Hz)
 // Subscribers:
-//   - /rb_nexus/motor/1/cmd (Int16)
-//   - /rb_nexus/servo/1/cmd (Int16)
-//   - /rb_nexus/pwm/cmd (Int16)
-//   - /rb_nexus/emergency_stop (Bool)
+//   /rb_nexus/motor/1/cmd    motor 1 power -100..100 % (Int16, send >= 10 Hz)
+//   /rb_nexus/servo/1/cmd    servo 1 angle 0..180 (Int16)
+//   /rb_nexus/pwm/cmd        D4 PWM 0..100 % (Int16)
+//   /rb_nexus/emergency_stop true = stop and latch, false = release (Bool)
 // =============================================================================
 
-// Publishers
-rcl_publisher_t pub_analog;
-rcl_publisher_t pub_encoder;
-rcl_publisher_t pub_imu;
-rcl_publisher_t pub_battery;
-rcl_publisher_t pub_status;
+RBMotorCommandGuard motorCommands(500);
 
-// Subscribers
-rcl_subscription_t sub_motor;
-rcl_subscription_t sub_servo;
-rcl_subscription_t sub_pwm;
-rcl_subscription_t sub_estop;
+rcl_publisher_t analogPub, encoderPub, imuPub, batteryPub, statusPub;
+rcl_subscription_t motorSub, servoSub, pwmSub, estopSub;
 
-// Messages
-std_msgs__msg__Int32MultiArray msg_analog;
-int32_t analog_buf[8];
-std_msgs__msg__Int32           msg_encoder;
-sensor_msgs__msg__Imu          msg_imu;
-sensor_msgs__msg__BatteryState msg_battery;
-std_msgs__msg__Int32           msg_status;
+std_msgs__msg__Int32MultiArray analog;
+int32_t analogChannels[8];
+std_msgs__msg__Int32 ticks, status;
+sensor_msgs__msg__Imu imu;
+sensor_msgs__msg__BatteryState battery;
+std_msgs__msg__Int16 motorCommand, servoCommand, pwmCommand;
+std_msgs__msg__Bool estopCommand;
+char imuFrame[] = "imu_link";
 
-std_msgs__msg__Int16           cmd_motor;
-std_msgs__msg__Int16           cmd_servo;
-std_msgs__msg__Int16           cmd_pwm;
-std_msgs__msg__Bool            cmd_estop;
-
-rclc_executor_t executor;
-rclc_support_t  support;
-rcl_allocator_t allocator;
-rcl_node_t      node;
-
-void cb_motor(const void* msgin) {
-  const std_msgs__msg__Int16* msg = (const std_msgs__msg__Int16*)msgin;
-  RB.motorSet(1, msg->data);
+void onMotor(const void* message) {
+  RB.motorPower(1, ((const std_msgs__msg__Int16*)message)->data);
   motorCommands.feed();
 }
 
-void cb_servo(const void* msgin) {
-  const std_msgs__msg__Int16* msg = (const std_msgs__msg__Int16*)msgin;
-  RB.servoWrite(8, constrain(msg->data, 0, 180));
+void onServo(const void* message) {
+  RB.servoAngle(1, constrain(((const std_msgs__msg__Int16*)message)->data, 0, 180));
 }
 
-void cb_pwm(const void* msgin) {
-  const std_msgs__msg__Int16* msg = (const std_msgs__msg__Int16*)msgin;
-  RB.pwmWrite(RB_PIN_D4, constrain(msg->data, 0, 255));
+void onPWM(const void* message) {
+  RB.pinPWM(RB_PIN_D4, constrain(((const std_msgs__msg__Int16*)message)->data, 0, 100));
 }
 
-void cb_estop(const void* msgin) {
-  const std_msgs__msg__Bool* msg = (const std_msgs__msg__Bool*)msgin;
-  if (msg->data) {
-    RB.emergencyStop();
-  } else {
-    RB.clearEmergencyStop();
-  }
+void onEmergency(const void* message) {
+  if (((const std_msgs__msg__Bool*)message)->data) RB.emergencyStop();
+  else RB.emergencyClear();
+}
+
+bool createROS() {
+  return RBROS.publisher(analogPub, RB_MSG(std_msgs, Int32MultiArray), RB_TOPIC_ANALOG_MULTI) &&
+         RBROS.publisher(encoderPub, RB_MSG(std_msgs, Int32), RB_TOPIC_ENCODER_CH1) &&
+         RBROS.publisher(imuPub, RB_MSG(sensor_msgs, Imu), RB_TOPIC_IMU_RAW) &&
+         RBROS.publisher(batteryPub, RB_MSG(sensor_msgs, BatteryState), RB_TOPIC_BATTERY) &&
+         RBROS.publisher(statusPub, RB_MSG(std_msgs, Int32), RB_TOPIC_ROBOT_STATUS) &&
+         RBROS.subscriber(motorSub, RB_MSG(std_msgs, Int16), RB_TOPIC_MOTOR_1_CMD, &motorCommand, onMotor) &&
+         RBROS.subscriber(servoSub, RB_MSG(std_msgs, Int16), RB_TOPIC_SERVO_1_CMD, &servoCommand, onServo) &&
+         RBROS.subscriber(pwmSub, RB_MSG(std_msgs, Int16), RB_TOPIC_PWM_CMD, &pwmCommand, onPWM) &&
+         RBROS.subscriber(estopSub, RB_MSG(std_msgs, Bool), RB_TOPIC_EMERGENCY_STOP, &estopCommand, onEmergency);
 }
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
   RB.encoderBegin();
   RB.imuBegin();
-  RB.motorStopAll();
+  RB.stop();
 
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_robot_node", "", &support));
+  analog.data.data = analogChannels;
+  analog.data.size = 8;
+  analog.data.capacity = 8;
+  imu.header.frame_id.data = imuFrame;
+  imu.header.frame_id.size = sizeof(imuFrame) - 1;
+  imu.header.frame_id.capacity = sizeof(imuFrame);
+  battery.present = true;
+  battery.current = battery.charge = battery.capacity = battery.design_capacity = NAN;
+  battery.temperature = battery.percentage = NAN;
 
-  // Initialize Publishers
-  rbROSCheck(rclc_publisher_init_default(&pub_analog, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32MultiArray), RB_TOPIC_ANALOG_MULTI));
-  rbROSCheck(rclc_publisher_init_default(&pub_encoder, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RB_TOPIC_ENCODER_CH1));
-  rbROSCheck(rclc_publisher_init_default(&pub_imu, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu), RB_TOPIC_IMU_RAW));
-  rbROSCheck(rclc_publisher_init_default(&pub_battery, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, BatteryState), RB_TOPIC_BATTERY));
-  rbROSCheck(rclc_publisher_init_default(&pub_status, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32), RB_TOPIC_ROBOT_STATUS));
-
-  msg_analog.data.data = analog_buf;
-  msg_analog.data.size = 8;
-  msg_analog.data.capacity = 8;
-
-  static char imuFrame[] = "imu_link";
-  msg_imu.header.frame_id.data = imuFrame;
-  msg_imu.header.frame_id.size = sizeof(imuFrame) - 1;
-  msg_imu.header.frame_id.capacity = sizeof(imuFrame);
-  rmw_uros_sync_session(1000);
-
-  // Initialize Subscribers
-  rbROSCheck(rclc_subscription_init_default(&sub_motor, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_MOTOR_1_CMD));
-  rbROSCheck(rclc_subscription_init_default(&sub_servo, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_SERVO_1_CMD));
-  rbROSCheck(rclc_subscription_init_default(&sub_pwm, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16), RB_TOPIC_PWM_CMD));
-  rbROSCheck(rclc_subscription_init_default(&sub_estop, &node, ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "/rb_nexus/emergency_stop"));
-
-  rbROSCheck(rclc_executor_init(&executor, &support.context, 4, &allocator));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_motor, &cmd_motor, &cb_motor, ON_NEW_DATA));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_servo, &cmd_servo, &cb_servo, ON_NEW_DATA));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_pwm, &cmd_pwm, &cb_pwm, ON_NEW_DATA));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &sub_estop, &cmd_estop, &cb_estop, ON_NEW_DATA));
+  RBROS.begin("rb_nexus_robot_node", createROS);
 }
 
 void loop() {
-  motorCommands.update();
   RB.update();
-  rclc_executor_spin_some(&executor, 1000000);
+  RBROS.spin();
+  motorCommands.update();
+  if (!RBROS.connected()) return;
 
-  unsigned long now = millis();
+  const uint32_t now = millis();
 
-  // 1. Encoder & IMU (50 Hz / 20ms)
-  static unsigned long lastFast = 0;
+  static uint32_t lastFast = 0;   // 50 Hz: encoder and IMU
   if (now - lastFast >= 20) {
     lastFast = now;
-    msg_encoder.data = RB.encoderRead(1);
-    rcl_publish(&pub_encoder, &msg_encoder, NULL);
-
-    if (rbFillImuMessage(msg_imu)) rcl_publish(&pub_imu, &msg_imu, NULL);
+    ticks.data = RB.encoderTicks(1);
+    RBROS.publish(encoderPub, &ticks);
+    if (RBROS.fillImu(imu)) RBROS.publish(imuPub, &imu);
   }
 
-  // 2. Analog MCP3208 (20 Hz / 50ms)
-  static unsigned long lastMedium = 0;
+  static uint32_t lastMedium = 0; // 20 Hz: analog
   if (now - lastMedium >= 50) {
     lastMedium = now;
-    for (uint8_t i = 0; i < 8; ++i) {
-      analog_buf[i] = RB.analogRead(i + 1);
-    }
-    rcl_publish(&pub_analog, &msg_analog, NULL);
+    for (uint8_t ch = 1; ch <= 8; ++ch) analogChannels[ch - 1] = RB.analogRaw(ch);
+    RBROS.publish(analogPub, &analog);
   }
 
-  // 3. Status & Battery (1 Hz / 1000ms)
-  static unsigned long lastSlow = 0;
+  static uint32_t lastSlow = 0;   // 1 Hz: battery and status
   if (now - lastSlow >= 1000) {
     lastSlow = now;
-    msg_battery.voltage = RB.analogVoltage(8) * 11.0f; // Scale factor
-    rcl_publish(&pub_battery, &msg_battery, NULL);
-
-    msg_status.data = RB.isEmergencyStopped() ? 99 : 1;
-    rcl_publish(&pub_status, &msg_status, NULL);
-    RB.toggleLED();
+    battery.voltage = RB.analogVolt(8) * 11.0f;
+    RBROS.stamp(battery.header.stamp);
+    RBROS.publish(batteryPub, &battery);
+    status.data = RB.emergencyActive() ? 99 : 1;
+    RBROS.publish(statusPub, &status);
+    RB.ledToggle();
   }
 }

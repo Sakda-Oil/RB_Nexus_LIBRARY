@@ -1,39 +1,30 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_subscription_t subscriber;
-std_msgs__msg__Int32 msg;
-rclc_executor_t executor;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
 
-void subscription_callback(const void* msgin) {
-  const std_msgs__msg__Int32* msg = (const std_msgs__msg__Int32*)msgin;
-  if (msg->data > 0) {
-    RB.setLED(true);
-  } else {
-    RB.setLED(false);
-  }
+// LED on when /rb_nexus/cmd_int > 0, off otherwise.
+//   ros2 topic pub --once /rb_nexus/cmd_int std_msgs/msg/Int32 "{data: 1}"
+rcl_subscription_t commandSub;
+std_msgs__msg__Int32 command;
+
+void onCommand(const void* message) {
+  const auto* msg = (const std_msgs__msg__Int32*)message;
+  RB.led(msg->data > 0);
+}
+
+bool createROS() {
+  return RBROS.subscriber(commandSub, RB_MSG(std_msgs, Int32), "/rb_nexus/cmd_int", &command, onCommand);
 }
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_subscriber", "", &support));
-  rbROSCheck(rclc_subscription_init_default(
-    &subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/rb_nexus/cmd_int"));
-
-  rbROSCheck(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+  RBROS.begin("rb_nexus_subscriber", createROS);
 }
 
 void loop() {
   RB.update();
-  rclc_executor_spin_some(&executor, 1000000);
+  RBROS.spin();
 }

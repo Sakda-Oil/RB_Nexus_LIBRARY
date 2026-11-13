@@ -26,7 +26,7 @@ void setup() {
 
   RB.begin();
   RB.encoderBegin();
-  RB.setLED(true);
+  RB.led(true);
 
   Serial.println("=========================================");
   Serial.println("RB_Nexus - 4-Channel Encoder Test");
@@ -39,11 +39,11 @@ void loop() {
   if (Serial.available()) {
     char cmd = Serial.read();
     if (cmd == 'r' || cmd == 'R') {
-      RB.resetAllEncoders();
+      RB.encoderResetAll();
       Serial.println("Reset all encoders to 0.");
     } else if (cmd >= '1' && cmd <= '4') {
       uint8_t id = cmd - '0';
-      RB.resetEncoder(id);
+      RB.encoderReset(id);
       Serial.printf("Reset ENC%d to 0.\n", id);
     } else if (cmd == 'h' || cmd == 'H' || cmd == '?') {
       printMenu();
@@ -53,17 +53,17 @@ void loop() {
   if (millis() - lastPrint >= 200) {
     lastPrint = millis();
 
-    int32_t t1 = RB.readEncoder(1);
-    int32_t t2 = RB.readEncoder(2);
-    int32_t t3 = RB.readEncoder(3);
-    int32_t t4 = RB.readEncoder(4);
+    int32_t t1 = RB.encoderTicks(1);
+    int32_t t2 = RB.encoderTicks(2);
+    int32_t t3 = RB.encoderTicks(3);
+    int32_t t4 = RB.encoderTicks(4);
 
     // ตรวจจับว่ามีการหมุนหรือไม่
     bool moving = (t1 != lastTicks[0] || t2 != lastTicks[1] ||
                    t3 != lastTicks[2] || t4 != lastTicks[3]);
 
     if (moving) {
-      RB.toggleLED();
+      RB.ledToggle();
     }
 
     Serial.printf("ENC1: %8ld | ENC2: %8ld | ENC3: %8ld | ENC4: %8ld\n",

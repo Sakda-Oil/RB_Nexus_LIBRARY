@@ -92,7 +92,7 @@ bool RBNexusBoard::imuBegin(RBIMUType type, uint8_t address) {
   _imuGyroSamples = _bnoReportCount = 0;
   _imuAddress = 0;
   _gyroZBias = 0;
-  imuResetRotationZ();
+  resetHeading();
   for (int i = 0; i < 3; ++i) _accel[i] = _gyro[i] = _mag[i] = _angles[i] = NAN;
   for (float& q : _quaternion) q = NAN;
   Wire.setTimeOut(20);
@@ -264,7 +264,7 @@ void RBNexusBoard::receiveBNOEvent(sh2_SensorEvent_t* raw) {
   ++_bnoReportCount;
 }
 
-bool RBNexusBoard::imuDataFresh(uint32_t maxAgeMs) const {
+bool RBNexusBoard::imuFresh(uint32_t maxAgeMs) const {
   return _imuDetected && (_imuReports & 3) == 3 &&
          uint32_t(millis() - _imuAccelTime) <= maxAgeMs &&
          uint32_t(millis() - _imuGyroTime) <= maxAgeMs;
@@ -283,20 +283,20 @@ void RBNexusBoard::updateRotationZ(float radiansPerSecond, uint32_t sampleUs) {
   _rotationZReceiveMs = millis();
   _rotationZPrimed = true;
 }
-float RBNexusBoard::imuRotationZ() const {
+float RBNexusBoard::heading() const {
   return _imuDetected && _rotationZPrimed ? _rotationZ : NAN;
 }
-bool RBNexusBoard::imuRotationZFresh(uint32_t maxAgeMs) const {
+bool RBNexusBoard::headingFresh(uint32_t maxAgeMs) const {
   return _imuDetected && _rotationZPrimed &&
          uint32_t(millis() - _rotationZReceiveMs) <= maxAgeMs;
 }
-bool RBNexusBoard::imuResetRotationZ(float degrees) {
+bool RBNexusBoard::resetHeading(float degrees) {
   if (!isfinite(degrees)) return false;
   _rotationZ = degrees;
   _rotationZPrimed = false;
   return true;
 }
-bool RBNexusBoard::imuSetGyroZBias(float radiansPerSecond) {
+bool RBNexusBoard::setHeadingBias(float radiansPerSecond) {
   if (!isfinite(radiansPerSecond)) return false;
   _gyroZBias = radiansPerSecond;
   _rotationZPrimed = false;

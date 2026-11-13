@@ -9,7 +9,7 @@ public:
   void feed() { _last = millis(); _received = true; }
   void update() {
     if (_received && uint32_t(millis() - _last) >= _timeout) {
-      RB.motorStopAll();
+      RB.stop();
       _received = false;
     }
   }

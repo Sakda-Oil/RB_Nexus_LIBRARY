@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
+#include <stdlib.h>
 #include <math.h>
 #include <string>
 #define IRAM_ATTR
@@ -17,6 +18,7 @@ inline uint32_t fakeNow = 100;
 inline int fakePins[40] = {};
 inline uint32_t fakeFreq[40] = {}, fakeDuty[40] = {};
 inline uint8_t fakeResolution[40] = {};
+inline int fakeFreqChanges = 0;
 inline uint32_t fakeEchoUs = 0, fakePulseTimeout = 0, fakePulseCalls = 0;
 inline unsigned long pulseIn(uint8_t, uint8_t, unsigned long timeout) {
   fakePulseTimeout = timeout; ++fakePulseCalls; return fakeEchoUs;
@@ -37,7 +39,7 @@ inline bool ledcAttach(uint8_t pin, uint32_t freq, uint8_t bits) {
 inline bool ledcWrite(uint8_t pin, uint32_t duty) { fakeDuty[pin] = duty; return true; }
 inline uint32_t ledcReadFreq(uint8_t pin) { return fakeFreq[pin]; }
 inline uint32_t ledcChangeFrequency(uint8_t pin, uint32_t freq, uint8_t bits) {
-  fakeFreq[pin] = freq; fakeResolution[pin] = bits; return freq;
+  ++fakeFreqChanges; fakeFreq[pin] = freq; fakeResolution[pin] = bits; return freq;
 }
 inline bool ledcDetach(uint8_t pin) { fakeFreq[pin] = 0; return true; }
 class Print {

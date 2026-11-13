@@ -16,19 +16,19 @@ void setup() {
   Serial.println("=========================================");
 
   RB.begin();
-  RB.setLED(true);
+  RB.led(true);
 }
 
 void loop() {
   Serial.println("\n--- MCP3208 Analog Readings ---");
   for (uint8_t ch = 1; ch <= 8; ++ch) {
-    uint16_t raw = RB.readAnalog(ch);
+    uint16_t raw = RB.analogRaw(ch);
     float voltage = (raw * VREF) / 4095.0f;
     Serial.printf("CH%d: %4u (%.3f V)   ", ch, raw, voltage);
     if (ch == 4) Serial.println(); // ขึ้นบรรทัดใหม่ทุก 4 ช่อง
   }
   Serial.println();
 
-  RB.toggleLED();
+  RB.ledToggle();
   delay(500);
 }

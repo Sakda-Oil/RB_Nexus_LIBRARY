@@ -41,7 +41,7 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
   RB.begin();
-  RB.setLED(true);
+  RB.led(true);
 
   setModeInput();
   printMenu();
@@ -73,7 +73,7 @@ void loop() {
       for (int i = 0; i < NUM_PINS; ++i) {
         digitalWrite(DIGITAL_PINS[i], toggleState ? HIGH : LOW);
       }
-      RB.toggleLED();
+      RB.ledToggle();
       Serial.printf("Output pins [4, 12, 14, 26, 27] -> %s\n", toggleState ? "HIGH (3.3V)" : "LOW (GND)");
     }
   } else {

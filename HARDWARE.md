@@ -44,7 +44,7 @@ Hardware information and verified peripheral pin mapping for **RB Nexus V0.1**:
 - Verify the supply and mode straps against the specific module.
 - Historical QC statements above are not new physical test results for this software release.
 - Relative Z rotation integrates gyro data in degrees on all supported IMUs. Keep Z vertical for planar turn measurements, calibrate while stationary, and expect drift; this is not absolute heading.
-- With sensor +Z pointing up, imuRotationZ() is clockwise/right positive and counter-clockwise/left negative. Raw gyro and fused orientation retain their native convention.
+- With sensor +Z pointing up, heading() is clockwise/right positive and counter-clockwise/left negative. Raw gyro and fused orientation retain their native convention.
 - BNO085 reports are consumed individually through the SH2 callback, including multiple reports in one SHTP transfer. Its internally calibrated gyro does not need the example's manual MPU bias routine.
 
 ## Distance sensors in software 0.2.4

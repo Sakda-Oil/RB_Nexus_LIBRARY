@@ -1,38 +1,42 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_publisher_t publisher;
-sensor_msgs__msg__BatteryState msg;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
+
+// Battery voltage from A8 through an 11:1 divider (e.g. 10k + 1k), 1 Hz.
+// Adjust DIVIDER and the 3S Li-ion limits (10.0 .. 12.6 V) for your battery.
+const float DIVIDER = 11.0f;
+rcl_publisher_t batteryPub;
+sensor_msgs__msg__BatteryState battery;
+
+bool createROS() {
+  return RBROS.publisher(batteryPub, RB_MSG(sensor_msgs, BatteryState), RB_TOPIC_BATTERY);
+}
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_battery_pub", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, BatteryState),
-    RB_TOPIC_BATTERY));
-
-  msg.power_supply_status = 0; // Unknown / Discharging
+  battery.present = true;
+  battery.current = NAN;   // Not measured
+  battery.charge = NAN;
+  battery.capacity = NAN;
+  battery.design_capacity = NAN;
+  battery.temperature = NAN;
+  battery.power_supply_status = sensor_msgs__msg__BatteryState__POWER_SUPPLY_STATUS_UNKNOWN;
+  RBROS.begin("rb_nexus_battery_pub", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 1000) { // 1 Hz
-    lastPub = millis();
-    // Example: Read supply voltage divider from MCP3208 Channel 8 (A8)
-    // Assume 10:1 resistor divider:
-    float rawV = RB.analogVoltage(8);
-    msg.voltage = rawV * 11.0f; // Scale factor for battery divider
-    msg.percentage = constrain((msg.voltage - 10.0f) / (12.6f - 10.0f), 0.0f, 1.0f);
-    rcl_publish(&publisher, &msg, NULL);
+  RBROS.spin();
+
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 1000) {
+    last = millis();
+    battery.voltage = RB.analogVolt(8) * DIVIDER;
+    battery.percentage = constrain((battery.voltage - 10.0f) / (12.6f - 10.0f), 0.0f, 1.0f);
+    RBROS.stamp(battery.header.stamp);
+    RBROS.publish(batteryPub, &battery);
   }
 }

@@ -1,37 +1,29 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_subscription_t subscriber;
-std_msgs__msg__Int16 msg;
-rclc_executor_t executor;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
 
-void pwm_callback(const void* msgin) {
-  const std_msgs__msg__Int16* msg = (const std_msgs__msg__Int16*)msgin;
-  uint8_t duty = (uint8_t)constrain(msg->data, 0, 255);
-  RB.pwmWrite(RB_PIN_D4, duty);
+// PWM on D4 in percent (0..100) from /rb_nexus/pwm/cmd (std_msgs/Int16).
+//   ros2 topic pub --once /rb_nexus/pwm/cmd std_msgs/msg/Int16 "{data: 50}"
+rcl_subscription_t pwmSub;
+std_msgs__msg__Int16 pwmCommand;
+
+void onPWM(const void* message) {
+  RB.pinPWM(RB_PIN_D4, constrain(((const std_msgs__msg__Int16*)message)->data, 0, 100));
+}
+
+bool createROS() {
+  return RBROS.subscriber(pwmSub, RB_MSG(std_msgs, Int16), RB_TOPIC_PWM_CMD, &pwmCommand, onPWM);
 }
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_pwm_sub", "", &support));
-  rbROSCheck(rclc_subscription_init_default(
-    &subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int16),
-    RB_TOPIC_PWM_CMD));
-
-  rbROSCheck(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  rbROSCheck(rclc_executor_add_subscription(&executor, &subscriber, &msg, &pwm_callback, ON_NEW_DATA));
+  RBROS.begin("rb_nexus_pwm_sub", createROS);
 }
 
 void loop() {
   RB.update();
-  rclc_executor_spin_some(&executor, 1000000);
+  RBROS.spin();
 }

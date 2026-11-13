@@ -1,46 +1,47 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-// micro-ROS Wi-Fi UDP Transport Configuration
-char ssid[] = "Your_WiFi_SSID";
-char pass[] = "Your_WiFi_Password";
-IPAddress agent_ip(192, 168, 1, 100); // IP Address of ROS 2 micro-ROS Agent
-size_t agent_port = 8888;
+// micro-ROS over Wi-Fi UDP. Start the agent on the ROS 2 computer:
+//   ros2 run micro_ros_agent micro_ros_agent udp4 --port 8888
+// The board reconnects automatically if Wi-Fi or the agent drops.
+const char* WIFI_SSID = "Your_WiFi_SSID";
+const char* WIFI_PASS = "Your_WiFi_Password";
+IPAddress agentIP(192, 168, 1, 100); // IP address of the computer running the agent
+const uint16_t AGENT_PORT = 8888;
 
-rcl_publisher_t publisher;
-std_msgs__msg__Int32 msg;
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+rcl_publisher_t counterPub;
+std_msgs__msg__Int32 counter;
+
+bool createROS() {
+  return RBROS.publisher(counterPub, RB_MSG(std_msgs, Int32), "/rb_nexus/wifi_test");
+}
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(115200);  // Free for debug text: ROS data goes over Wi-Fi
   RB.begin();
-
-  // Set Wi-Fi transport for micro-ROS
-  if (!RBMicroROS.beginWiFi(ssid, pass, agent_ip, agent_port)) {
-    RB.emergencyStop();
-    while (true) delay(100);
+  if (!RBROS.useWiFi(WIFI_SSID, WIFI_PASS, agentIP, AGENT_PORT)) {
+    Serial.println("Wi-Fi connection failed: check SSID and password, then reset.");
+    while (true) { RB.ledToggle(); delay(100); }
   }
-
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_wifi_node", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32),
-    "/rb_nexus/wifi_test"));
-
-  msg.data = 0;
+  Serial.printf("Wi-Fi OK, IP %s. Waiting for agent...\n", RB.wifiIP().c_str());
+  RBROS.begin("rb_nexus_wifi_node", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 1000) {
-    lastPub = millis();
-    msg.data++;
-    rcl_publish(&publisher, &msg, NULL);
-    RB.toggleLED();
+  RBROS.spin();
+
+  static RBROSState lastState = RBROSState::WaitingAgent;
+  if (RBROS.state() != lastState) {
+    lastState = RBROS.state();
+    Serial.printf("micro-ROS: %s\n", RBROS.stateText());
+  }
+
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 1000) {
+    last = millis();
+    counter.data++;
+    RBROS.publish(counterPub, &counter);
+    RB.ledToggle();
   }
 }

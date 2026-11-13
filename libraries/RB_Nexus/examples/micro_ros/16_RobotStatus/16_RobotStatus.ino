@@ -1,49 +1,40 @@
 #include <RB_Nexus.h>
 #include <RB_Nexus_MicroROS.h>
 
-rcl_publisher_t publisher;
-std_msgs__msg__Int32MultiArray msg;
-int32_t status_array[5];
-rclc_support_t support;
-rcl_allocator_t allocator;
-rcl_node_t node;
+// Start the agent (before or after the board):
+//   ros2 run micro_ros_agent micro_ros_agent serial --dev /dev/ttyUSB0 -b 115200
+// The board reconnects automatically. Do not print to Serial: it carries ROS data.
+
+// Publishes [uptime s, free heap bytes, Wi-Fi RSSI dBm, emergency 0/1, A8 raw] at 1 Hz.
+rcl_publisher_t statusPub;
+std_msgs__msg__Int32MultiArray status;
+int32_t values[5];
+
+bool createROS() {
+  return RBROS.publisher(statusPub, RB_MSG(std_msgs, Int32MultiArray), RB_TOPIC_ROBOT_STATUS);
+}
 
 void setup() {
-  Serial.begin(115200);
   RB.begin();
-
-  set_microros_transports();
-  allocator = rcutils_get_default_allocator();
-  rbROSCheck(rclc_support_init(&support, 0, NULL, &allocator));
-  rbROSCheck(rclc_node_init_default(&node, "rb_nexus_status_pub", "", &support));
-  rbROSCheck(rclc_publisher_init_default(
-    &publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Int32MultiArray),
-    RB_TOPIC_ROBOT_STATUS));
-
-  msg.data.data = status_array;
-  msg.data.size = 5;
-  msg.data.capacity = 5;
+  status.data.data = values;
+  status.data.size = 5;
+  status.data.capacity = 5;
+  RBROS.begin("rb_nexus_status_pub", createROS);
 }
 
 void loop() {
   RB.update();
-  static unsigned long lastPub = 0;
-  if (millis() - lastPub >= 1000) { // 1 Hz
-    lastPub = millis();
+  RBROS.spin();
 
-    // 0: Uptime (seconds)
-    status_array[0] = millis() / 1000;
-    // 1: Free Heap (bytes)
-    status_array[1] = ESP.getFreeHeap();
-    // 2: WiFi RSSI (dBm)
-    status_array[2] = RB.wifiRSSI();
-    // 3: Emergency Stop State (0=Normal, 1=E-STOP)
-    status_array[3] = RB.isEmergencyStopped() ? 1 : 0;
-    // 4: Battery Raw ADC
-    status_array[4] = RB.analogRead(8);
-
-    rcl_publish(&publisher, &msg, NULL);
-    RB.toggleLED();
+  static uint32_t last = 0;
+  if (RBROS.connected() && millis() - last >= 1000) {
+    last = millis();
+    values[0] = millis() / 1000;
+    values[1] = ESP.getFreeHeap();
+    values[2] = RB.wifiConnected() ? RB.wifiRSSI() : 0;
+    values[3] = RB.emergencyActive() ? 1 : 0;
+    values[4] = RB.analogRaw(8);
+    RBROS.publish(statusPub, &status);
+    RB.ledToggle();
   }
 }

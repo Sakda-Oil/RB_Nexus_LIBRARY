@@ -12,7 +12,7 @@ void setup() {
   delay(1000);
 
   RB.begin();
-  RB.setLED(true);
+  RB.led(true);
 
   SerialBT.begin("RB_Nexus_BT"); // ชื่ออุปกรณ์ Bluetooth ที่แสดงเมื่อค้นหา
 
@@ -32,7 +32,7 @@ void loop() {
     Serial.write(c);
     // Echo กลับไปยังอุปกรณ์ Bluetooth
     SerialBT.write(c);
-    RB.toggleLED();
+    RB.ledToggle();
   }
 
   // รับข้อมูลจาก Serial Monitor ส่งออก Bluetooth

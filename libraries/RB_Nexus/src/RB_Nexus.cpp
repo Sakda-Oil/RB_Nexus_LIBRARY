@@ -11,11 +11,17 @@
 #include <driver/twai.h>
 
 // PCA9685 Registers
-static constexpr uint8_t PCA9685_MODE1       = 0x00;
-static constexpr uint8_t PCA9685_MODE2       = 0x01;
-static constexpr uint8_t PCA9685_LED0_ON_L   = 0x06;
-static constexpr uint8_t PCA9685_ALLLED_ON_L = 0xFA;
-static constexpr uint8_t PCA9685_PRESCALE    = 0xFE;
+static constexpr uint8_t PCA9685_MODE1     = 0x00;
+static constexpr uint8_t PCA9685_MODE2     = 0x01;
+static constexpr uint8_t PCA9685_LED0_ON_L = 0x06;
+static constexpr uint8_t PCA9685_PRESCALE  = 0xFE;
+
+static constexpr uint8_t GPIO_PWM_BITS = 10;
+static constexpr uint32_t BUTTON_DEBOUNCE_MS = 30;
+
+static inline bool validMotor(uint8_t id) { return id >= 1 && id <= 4; }
+static inline bool validServo(uint8_t n) { return n >= 1 && n <= RB_SERVO_COUNT; }
+static inline int16_t clampPercent(int32_t p) { return p > 100 ? 100 : (p < -100 ? -100 : p); }
 
 // Encoder ISR state
 static volatile int32_t s_encTicks[4] = {0, 0, 0, 0};
@@ -76,49 +82,49 @@ RBNexusBoard::RBNexusBoard()
   }
 }
 
+// =============================================================================
+// System
+// =============================================================================
 bool RBNexusBoard::begin(uint32_t i2cFreq, uint32_t spiFreq) {
   _spiFreq = spiFreq;
 
-  // Initialize Status LED
-  pinMode(RB_PIN_LED, OUTPUT);
-  digitalWrite(RB_PIN_LED, LOW);
+  ::pinMode(RB_PIN_LED, OUTPUT);
+  ::digitalWrite(RB_PIN_LED, LOW);
 
-  // Initialize I2C Bus for PCA9685
+  // I2C bus for PCA9685 (and IMU)
   Wire.begin(RB_PIN_I2C_SDA, RB_PIN_I2C_SCL, i2cFreq);
 
-  // Probe PCA9685
   Wire.beginTransmission(RB_PCA9685_ADDR);
   _pcaConnected = (Wire.endTransmission() == 0);
 
   if (_pcaConnected) {
     writeRegister8(PCA9685_MODE1, 0x20); // Auto-increment enabled
     writeRegister8(PCA9685_MODE2, 0x04); // Totem-pole output
-    setPWMFreq(50.0f);                  // 50 Hz default for Servos and Motors
+    pcaFrequency(50.0f);                 // 50 Hz default for servos and motors
     for (uint8_t ch = 0; ch < 16; ++ch) {
-      setPWMDuty(ch, 0);
+      pcaDuty(ch, 0);
     }
   }
 
-  // Initialize SPI Bus for MCP3208
-  pinMode(RB_PIN_SPI_CS, OUTPUT);
-  digitalWrite(RB_PIN_SPI_CS, HIGH);
+  // SPI bus for MCP3208
+  ::pinMode(RB_PIN_SPI_CS, OUTPUT);
+  ::digitalWrite(RB_PIN_SPI_CS, HIGH);
   SPI.begin(RB_PIN_SPI_CLK, RB_PIN_SPI_MISO, RB_PIN_SPI_MOSI, RB_PIN_SPI_CS);
 
-  feedWatchdog();
+  watchdogFeed();
   return _pcaConnected;
 }
 
 void RBNexusBoard::update() {
   unsigned long now = millis();
 
-  // Watchdog check
   if (_watchdogEnabled && (now - _lastWatchdogFeed > _watchdogTimeoutMs)) {
     if (!_emergencyStopActive) {
       emergencyStop();
     }
   }
 
-  // Encoders RPM computation (every 50 ms)
+  // Encoder RPM and PID (every 50 ms)
   if (now - _lastRPMUpdate >= 50) {
     _lastRPMUpdate = now;
     updateEncodersRPM();
@@ -127,7 +133,7 @@ void RBNexusBoard::update() {
 
   imuUpdate();
 
-  // Background Wi-Fi Auto-reconnect check (every 5 seconds)
+  // Background Wi-Fi auto-reconnect check (every 5 seconds)
   if (_wifiAutoReconnect && (now - _lastWiFiCheck >= 5000)) {
     _lastWiFiCheck = now;
     if (WiFi.status() != WL_CONNECTED && WiFi.getMode() != WIFI_OFF) {
@@ -136,121 +142,214 @@ void RBNexusBoard::update() {
   }
 }
 
-// --- Status LED ---
-void RBNexusBoard::setLED(bool on) {
-  digitalWrite(RB_PIN_LED, on ? HIGH : LOW);
-}
-
-void RBNexusBoard::toggleLED() {
-  digitalWrite(RB_PIN_LED, !digitalRead(RB_PIN_LED));
-}
-
-// --- Digital I/O Helpers ---
-int RBNexusBoard::digitalRead(uint8_t pin) {
-  return ::digitalRead(pin);
-}
-
-void RBNexusBoard::digitalWrite(uint8_t pin, uint8_t val) {
-  ::digitalWrite(pin, val);
-}
-
-void RBNexusBoard::pinMode(uint8_t pin, uint8_t mode) {
-  ::pinMode(pin, mode);
-}
-
-// --- ESP32 Internal LEDC PWM ---
-bool RBNexusBoard::pwmWrite(uint8_t pin, uint32_t duty, uint32_t freq, uint8_t resolution) {
-  if (pin >= 40 || resolution < 1 || resolution > 20 || freq == 0) return false;
-  if (_pwmResolution[pin] == 0) {
-    if (!ledcAttach(pin, freq, resolution)) return false;
-  } else if (_pwmResolution[pin] != resolution || ledcReadFreq(pin) != freq) {
-    if (ledcChangeFrequency(pin, freq, resolution) == 0) return false;
+void RBNexusBoard::wait(uint32_t ms) {
+  const uint32_t start = millis();
+  while (uint32_t(millis() - start) < ms) {
+    update();
+    delay(1);
   }
-  _pwmResolution[pin] = resolution;
-  const uint32_t maximum = (1UL << resolution) - 1;
-  return ledcWrite(pin, duty > maximum ? maximum : duty);
 }
 
-bool RBNexusBoard::pwmSetFrequency(uint8_t pin, uint32_t hz) {
-  return pin < 40 && _pwmResolution[pin] && hz &&
-         ledcChangeFrequency(pin, hz, _pwmResolution[pin]) != 0;
+// =============================================================================
+// Status LED
+// =============================================================================
+void RBNexusBoard::led(bool on) {
+  ::digitalWrite(RB_PIN_LED, on ? HIGH : LOW);
 }
 
-void RBNexusBoard::pwmStop(uint8_t pin) {
+void RBNexusBoard::ledToggle() {
+  ::digitalWrite(RB_PIN_LED, !::digitalRead(RB_PIN_LED));
+}
+
+// =============================================================================
+// Two-wheel driving
+// =============================================================================
+bool RBNexusBoard::setWheels(uint8_t leftMotor, uint8_t rightMotor) {
+  if (!validMotor(leftMotor) || !validMotor(rightMotor) || leftMotor == rightMotor) return false;
+  _leftMotor = leftMotor;
+  _rightMotor = rightMotor;
+  return true;
+}
+
+void RBNexusBoard::reverseMotor(uint8_t motorId, bool reversed) {
+  if (validMotor(motorId)) _motorReversed[motorId - 1] = reversed;
+}
+
+void RBNexusBoard::drive(int16_t leftPower, int16_t rightPower) {
+  motorPower(_leftMotor, leftPower);
+  motorPower(_rightMotor, rightPower);
+}
+
+void RBNexusBoard::forward(int16_t power, uint32_t durationMs) {
+  const int16_t p = abs(clampPercent(power));
+  drive(p, p);
+  if (durationMs) { wait(durationMs); stop(); }
+}
+
+void RBNexusBoard::backward(int16_t power, uint32_t durationMs) {
+  const int16_t p = abs(clampPercent(power));
+  drive(-p, -p);
+  if (durationMs) { wait(durationMs); stop(); }
+}
+
+void RBNexusBoard::turnLeft(int16_t power, uint32_t durationMs) {
+  const int16_t p = abs(clampPercent(power));
+  drive(-p, p);
+  if (durationMs) { wait(durationMs); stop(); }
+}
+
+void RBNexusBoard::turnRight(int16_t power, uint32_t durationMs) {
+  const int16_t p = abs(clampPercent(power));
+  drive(p, -p);
+  if (durationMs) { wait(durationMs); stop(); }
+}
+
+bool RBNexusBoard::turnDegrees(float degrees, int16_t power, uint32_t timeoutMs) {
+  if (!isfinite(degrees)) return false;
+  if (degrees == 0.0f) return true;
+  if (_emergencyStopActive || !headingFresh()) return false;
+
+  const float target = heading() + degrees;
+  const int16_t p = abs(clampPercent(power));
+  if (degrees > 0) drive(p, -p); else drive(-p, p);
+
+  bool reached = false;
+  const uint32_t start = millis();
+  while (uint32_t(millis() - start) < timeoutMs) {
+    update();
+    if (_emergencyStopActive || !headingFresh(200)) break;
+    const float h = heading();
+    if ((degrees > 0 && h >= target) || (degrees < 0 && h <= target)) {
+      reached = true;
+      break;
+    }
+    delay(1);
+  }
+  stop();
+  return reached;
+}
+
+void RBNexusBoard::stop() {
+  for (uint8_t id = 1; id <= 4; ++id) motorStop(id);
+}
+
+void RBNexusBoard::brake() {
+  for (uint8_t id = 1; id <= 4; ++id) motorBrake(id);
+}
+
+// =============================================================================
+// ESP32 GPIO pins
+// =============================================================================
+void RBNexusBoard::releasePWM(uint8_t pin) {
+  if (pin < 40 && _gpioPWMFreq[pin]) {
+    ledcDetach(pin);
+    _gpioPWMFreq[pin] = 0;
+  }
+}
+
+void RBNexusBoard::pinOn(uint8_t pin) {
   if (pin >= 40) return;
-  ledcDetach(pin);
-  _pwmResolution[pin] = 0;
+  releasePWM(pin);
+  _buttons[pin].ready = false;
+  ::pinMode(pin, OUTPUT);
+  ::digitalWrite(pin, HIGH);
+}
+
+void RBNexusBoard::pinOff(uint8_t pin) {
+  if (pin >= 40) return;
+  releasePWM(pin);
+  _buttons[pin].ready = false;
   ::pinMode(pin, OUTPUT);
   ::digitalWrite(pin, LOW);
 }
 
-// --- MCP3208 12-bit SPI ADC ---
-uint16_t RBNexusBoard::analogRead(uint8_t channel) {
-  uint8_t mcpCh = 0;
-  if (channel >= RB_ADC_CH_MIN && channel <= RB_ADC_CH_MAX) {
-    mcpCh = channel - 1; // A1 -> CH0, ..., A8 -> CH7
-  } else {
-    return 0;
-  }
+bool RBNexusBoard::pinRead(uint8_t pin) {
+  return pin < 40 && ::digitalRead(pin) == HIGH;
+}
 
-  // MCP3208 SPI command frame:
-  // Byte 0: Start bit (1) | SGL (1) | D2
-  // Byte 1: D1 | D0 in bits 7-6
-  // Byte 2: 0x00 clock out
-  uint8_t tx[3];
-  tx[0] = 0x06 | ((mcpCh >> 2) & 0x01);
-  tx[1] = (mcpCh & 0x03) << 6;
-  tx[2] = 0x00;
+bool RBNexusBoard::pinPWM(uint8_t pin, float percent, uint32_t frequencyHz) {
+  if (pin >= 40 || frequencyHz == 0 || !isfinite(percent)) return false;
+  // Compare against the requested frequency: the hardware may round the real one.
+  if (_gpioPWMFreq[pin] == 0) {
+    if (!ledcAttach(pin, frequencyHz, GPIO_PWM_BITS)) return false;
+  } else if (_gpioPWMFreq[pin] != frequencyHz) {
+    if (ledcChangeFrequency(pin, frequencyHz, GPIO_PWM_BITS) == 0) return false;
+  }
+  _gpioPWMFreq[pin] = frequencyHz;
+  _buttons[pin].ready = false;
+  if (percent < 0) percent = 0;
+  if (percent > 100) percent = 100;
+  const uint32_t maximum = (1UL << GPIO_PWM_BITS) - 1;
+  return ledcWrite(pin, uint32_t(lroundf(percent * maximum / 100.0f)));
+}
+
+bool RBNexusBoard::buttonPressed(uint8_t pin) {
+  if (pin >= 40) return false;
+  ButtonState& b = _buttons[pin];
+  const uint32_t now = millis();
+  if (!b.ready) {
+    releasePWM(pin);
+    ::pinMode(pin, INPUT_PULLUP);
+    b.ready = true;
+    b.stable = b.last = true; // Released (HIGH)
+    b.changedAt = now;
+    return false;
+  }
+  const bool level = ::digitalRead(pin) == HIGH;
+  if (level != b.last) {
+    b.last = level;
+    b.changedAt = now;
+  }
+  if (level != b.stable && uint32_t(now - b.changedAt) >= BUTTON_DEBOUNCE_MS) {
+    b.stable = level;
+    return !level; // Pressed = pulled to GND
+  }
+  return false;
+}
+
+// =============================================================================
+// MCP3208 12-bit SPI ADC
+// =============================================================================
+uint16_t RBNexusBoard::analogRaw(uint8_t channel) {
+  if (channel < RB_ADC_CH_MIN || channel > RB_ADC_CH_MAX) return 0;
+  const uint8_t mcpCh = channel - 1; // A1 -> CH0, ..., A8 -> CH7
+
+  // MCP3208 frame: start(1) SGL(1) D2 | D1 D0 in bits 7-6 | clock out
+  uint8_t tx0 = 0x06 | ((mcpCh >> 2) & 0x01);
+  uint8_t tx1 = (mcpCh & 0x03) << 6;
 
   SPI.beginTransaction(SPISettings(_spiFreq, MSBFIRST, SPI_MODE0));
   ::digitalWrite(RB_PIN_SPI_CS, LOW);
-  SPI.transfer(tx[0]);
-  uint8_t b1 = SPI.transfer(tx[1]);
-  uint8_t b2 = SPI.transfer(tx[2]);
+  SPI.transfer(tx0);
+  uint8_t b1 = SPI.transfer(tx1);
+  uint8_t b2 = SPI.transfer(0x00);
   ::digitalWrite(RB_PIN_SPI_CS, HIGH);
   SPI.endTransaction();
 
   return ((uint16_t)(b1 & 0x0F) << 8) | b2;
 }
 
-float RBNexusBoard::analogVoltage(uint8_t channel, float vref) {
-  uint16_t raw = analogRead(channel);
-  return (raw * vref) / 4095.0f;
+float RBNexusBoard::analogVolt(uint8_t channel, float vref) {
+  return (analogRaw(channel) * vref) / 4095.0f;
 }
 
-uint16_t RBNexusBoard::analogReadAverage(uint8_t channel, uint16_t samples) {
+float RBNexusBoard::analogPercent(uint8_t channel) {
+  return analogRaw(channel) * 100.0f / 4095.0f;
+}
+
+uint16_t RBNexusBoard::analogAverage(uint8_t channel, uint16_t samples) {
   if (samples == 0) return 0;
   uint32_t sum = 0;
   for (uint16_t i = 0; i < samples; ++i) {
-    sum += analogRead(channel);
+    sum += analogRaw(channel);
     delayMicroseconds(50);
   }
   return (uint16_t)(sum / samples);
 }
 
-uint16_t RBNexusBoard::analogReadMin(uint8_t channel, uint16_t samples) {
-  if (samples == 0) return 0;
-  uint16_t minVal = 4095;
-  for (uint16_t i = 0; i < samples; ++i) {
-    uint16_t val = analogRead(channel);
-    if (val < minVal) minVal = val;
-    delayMicroseconds(50);
-  }
-  return minVal;
-}
-
-uint16_t RBNexusBoard::analogReadMax(uint8_t channel, uint16_t samples) {
-  if (samples == 0) return 0;
-  uint16_t maxVal = 0;
-  for (uint16_t i = 0; i < samples; ++i) {
-    uint16_t val = analogRead(channel);
-    if (val > maxVal) maxVal = val;
-    delayMicroseconds(50);
-  }
-  return maxVal;
-}
-
-// --- PCA9685 Low-level PWM ---
+// =============================================================================
+// PCA9685
+// =============================================================================
 uint8_t RBNexusBoard::readRegister8(uint8_t reg) {
   Wire.beginTransmission(RB_PCA9685_ADDR);
   Wire.write(reg);
@@ -266,7 +365,7 @@ void RBNexusBoard::writeRegister8(uint8_t reg, uint8_t value) {
   Wire.endTransmission();
 }
 
-void RBNexusBoard::setPWMFreq(float freqHz) {
+void RBNexusBoard::pcaFrequency(float freqHz) {
   if (!_pcaConnected || !isfinite(freqHz)) return;
   if (freqHz < 24.0f) freqHz = 24.0f;
   if (freqHz > 1526.0f) freqHz = 1526.0f;
@@ -284,7 +383,7 @@ void RBNexusBoard::setPWMFreq(float freqHz) {
   writeRegister8(PCA9685_MODE1, oldmode | 0xA0);
 }
 
-void RBNexusBoard::setPWM(uint8_t channel, uint16_t on, uint16_t off) {
+void RBNexusBoard::pcaWrite(uint8_t channel, uint16_t on, uint16_t off) {
   if (!_pcaConnected || channel > 15) return;
   Wire.beginTransmission(RB_PCA9685_ADDR);
   Wire.write(PCA9685_LED0_ON_L + 4 * channel);
@@ -295,26 +394,35 @@ void RBNexusBoard::setPWM(uint8_t channel, uint16_t on, uint16_t off) {
   Wire.endTransmission();
 }
 
-void RBNexusBoard::setPWMDuty(uint8_t channel, uint16_t duty) {
+void RBNexusBoard::pcaDuty(uint8_t channel, uint16_t duty) {
   if (channel > 15) return;
   if (duty == 0) {
-    setPWM(channel, 0, 4096);
+    pcaWrite(channel, 0, 4096);      // Full OFF
   } else if (duty >= 4095) {
-    setPWM(channel, 4096, 0);
+    pcaWrite(channel, 4096, 0);      // Full ON
   } else {
-    setPWM(channel, 0, duty);
+    pcaWrite(channel, 0, duty);
   }
 }
 
-// --- DC Motor Control with Dead-time Safety ---
-void RBNexusBoard::motorSet(uint8_t motorId, int16_t speed) {
-  if (motorId < 1 || motorId > 4) return;
+// =============================================================================
+// DC motors with dead-time protection
+// =============================================================================
+void RBNexusBoard::motorPower(uint8_t motorId, int16_t percent) {
+  if (!validMotor(motorId)) return;
+  int32_t p = clampPercent(percent);
+  if (_motorReversed[motorId - 1]) p = -p;
+  motorSpeed255(motorId, int16_t((p * 255) / 100));
+}
+
+void RBNexusBoard::motorSpeed255(uint8_t motorId, int16_t speed) {
+  if (!validMotor(motorId)) return;
   _pid[motorId - 1].enabled = false;
   motorOutputSet(motorId, speed);
 }
 
 void RBNexusBoard::motorOutputSet(uint8_t motorId, int16_t speed) {
-  if (motorId < 1 || motorId > 4) return;
+  if (!validMotor(motorId)) return;
   if (_emergencyStopActive) {
     motorOutputStop(motorId);
     return;
@@ -331,10 +439,10 @@ void RBNexusBoard::motorOutputSet(uint8_t motorId, int16_t speed) {
 
   int8_t newDir = (speed > 0) ? 1 : -1;
 
-  // Direction Reversal Dead-time Protection
+  // Direction reversal dead-time protection
   if (_motorLastDir[idx] != 0 && _motorLastDir[idx] != newDir) {
-    setPWMDuty(chA, 0);
-    setPWMDuty(chB, 0);
+    pcaDuty(chA, 0);
+    pcaDuty(chB, 0);
     delay(_deadTimeMs);
   } else if (_motorLastDir[idx] == 0) {
     uint32_t elapsed = millis() - _motorLastStopTime[idx];
@@ -346,26 +454,18 @@ void RBNexusBoard::motorOutputSet(uint8_t motorId, int16_t speed) {
   uint16_t duty = (uint16_t)((absSpeed * 4095UL) / 255);
 
   if (newDir > 0) {
-    setPWMDuty(chA, duty);
-    setPWMDuty(chB, 0);
+    pcaDuty(chA, duty);
+    pcaDuty(chB, 0);
   } else {
-    setPWMDuty(chA, 0);
-    setPWMDuty(chB, duty);
+    pcaDuty(chA, 0);
+    pcaDuty(chB, duty);
   }
 
   _motorLastDir[idx] = newDir;
 }
 
-void RBNexusBoard::motorForward(uint8_t motorId, uint8_t speed) {
-  motorSet(motorId, (int16_t)speed);
-}
-
-void RBNexusBoard::motorBackward(uint8_t motorId, uint8_t speed) {
-  motorSet(motorId, -(int16_t)speed);
-}
-
 void RBNexusBoard::motorStop(uint8_t motorId) {
-  if (motorId < 1 || motorId > 4) return;
+  if (!validMotor(motorId)) return;
   auto& pid = _pid[motorId - 1];
   pid.enabled = false;
   pid.targetRPM = pid.integral = pid.prevError = 0;
@@ -373,78 +473,62 @@ void RBNexusBoard::motorStop(uint8_t motorId) {
 }
 
 void RBNexusBoard::motorOutputStop(uint8_t motorId) {
-  if (motorId < 1 || motorId > 4) return;
+  if (!validMotor(motorId)) return;
   uint8_t idx = motorId - 1;
   uint8_t chA = idx * 2;
   uint8_t chB = chA + 1;
-  setPWMDuty(chA, 0);
-  setPWMDuty(chB, 0);
+  pcaDuty(chA, 0);
+  pcaDuty(chB, 0);
   _motorLastDir[idx] = 0;
   _motorLastStopTime[idx] = millis();
 }
 
 void RBNexusBoard::motorBrake(uint8_t motorId) {
-  if (motorId < 1 || motorId > 4) return;
+  if (!validMotor(motorId)) return;
   motorStop(motorId);
   if (_emergencyStopActive) return;
   uint8_t idx = motorId - 1;
   uint8_t chA = idx * 2;
   uint8_t chB = chA + 1;
-  setPWMDuty(chA, 4095);
-  setPWMDuty(chB, 4095);
+  pcaDuty(chA, 4095);
+  pcaDuty(chB, 4095);
   _motorLastDir[idx] = 0;
-}
-
-void RBNexusBoard::motorStopAll() {
-  for (uint8_t i = 1; i <= 4; ++i) {
-    motorStop(i);
-  }
 }
 
 void RBNexusBoard::emergencyStop() {
   _emergencyStopActive = true;
-  motorStopAll();
-  digitalWrite(RB_PIN_LED, LOW);
+  stop();
+  ::digitalWrite(RB_PIN_LED, LOW);
 }
 
-// --- Closed-Loop PID Motor Control ---
-void RBNexusBoard::motorSetRPM(uint8_t motorId, float rpm) {
-  if (motorId < 1 || motorId > 4) return;
+// =============================================================================
+// Closed-loop PID motor control
+// =============================================================================
+void RBNexusBoard::motorRPM(uint8_t motorId, float rpm) {
+  if (!validMotor(motorId)) return;
   uint8_t idx = motorId - 1;
   if (_emergencyStopActive || !isfinite(rpm)) return;
   if (rpm == 0) { motorStop(motorId); return; }
   if (!_pid[idx].enabled) {
     _pid[idx].integral = _pid[idx].prevError = 0;
+    _pid[idx].primed = false; // Avoid a derivative kick on the first sample
     _pid[idx].lastTime = millis();
   }
   _pid[idx].targetRPM = rpm;
   _pid[idx].enabled = true;
 }
 
-void RBNexusBoard::motorSetPID(uint8_t motorId, float kp, float ki, float kd) {
-  if (motorId < 1 || motorId > 4) return;
-  uint8_t idx = motorId - 1;
+void RBNexusBoard::motorPID(uint8_t motorId, float kp, float ki, float kd) {
+  if (!validMotor(motorId)) return;
   if (!isfinite(kp) || !isfinite(ki) || !isfinite(kd)) return;
+  uint8_t idx = motorId - 1;
   _pid[idx].kp = kp;
   _pid[idx].ki = ki;
   _pid[idx].kd = kd;
 }
 
-void RBNexusBoard::motorPIDEnable(uint8_t motorId) {
-  if (motorId < 1 || motorId > 4) return;
-  if (_emergencyStopActive) return;
-  motorSetRPM(motorId, _pid[motorId - 1].targetRPM);
-}
-
-void RBNexusBoard::motorPIDDisable(uint8_t motorId) {
-  if (motorId < 1 || motorId > 4) return;
-  _pid[motorId - 1].enabled = false;
-  motorStop(motorId);
-}
-
-bool RBNexusBoard::isMotorPIDEnabled(uint8_t motorId) const {
-  if (motorId < 1 || motorId > 4) return false;
-  return _pid[motorId - 1].enabled;
+bool RBNexusBoard::motorPIDActive(uint8_t motorId) const {
+  return validMotor(motorId) && _pid[motorId - 1].enabled;
 }
 
 void RBNexusBoard::updatePID() {
@@ -457,6 +541,10 @@ void RBNexusBoard::updatePID() {
     _pid[i].lastTime = now;
 
     float error = _pid[i].targetRPM - _currentRPM[i];
+    if (!_pid[i].primed) {
+      _pid[i].prevError = error;
+      _pid[i].primed = true;
+    }
     _pid[i].integral += error * dt;
 
     // Integral anti-windup clamp
@@ -468,7 +556,6 @@ void RBNexusBoard::updatePID() {
 
     float output = (_pid[i].kp * error) + (_pid[i].ki * _pid[i].integral) + (_pid[i].kd * derivative);
 
-    // Clamp output to robotics speed scale (-255 to 255)
     if (output > 255.0f) output = 255.0f;
     if (output < -255.0f) output = -255.0f;
 
@@ -476,35 +563,39 @@ void RBNexusBoard::updatePID() {
   }
 }
 
-// --- Servo Control ---
-void RBNexusBoard::servoAttach(uint8_t channel) {
+// =============================================================================
+// Servo 1-8
+// =============================================================================
+void RBNexusBoard::servoChannelPulse(uint8_t channel, uint16_t us) {
   if (channel < RB_SERVO_CH_MIN || channel > RB_SERVO_CH_MAX) return;
-  servoWrite(channel, 90);
-}
-
-void RBNexusBoard::servoWriteMicroseconds(uint8_t channel, uint16_t us) {
-  if (channel < RB_SERVO_CH_MIN || channel > RB_SERVO_CH_MAX) return;
-  if (us == 0) { servoDetach(channel); return; }
+  if (us == 0) { pcaDuty(channel, 0); return; }
   if (us < 500) us = 500;
   if (us > 2500) us = 2500;
   uint32_t ticks = (uint32_t)(us * _pwmFrequency * 4096.0f / 1000000.0f + 0.5f);
   if (ticks > 4095) ticks = 4095;
-  setPWM(channel, 0, ticks);
+  pcaWrite(channel, 0, ticks);
 }
 
-void RBNexusBoard::servoWrite(uint8_t channel, uint8_t angle, uint16_t minUs, uint16_t maxUs) {
-  if (minUs > maxUs) return;
-  if (angle > 180) angle = 180;
-  uint16_t us = minUs + (uint16_t)(((uint32_t)angle * (maxUs - minUs)) / 180UL);
-  servoWriteMicroseconds(channel, us);
+void RBNexusBoard::servoPulse(uint8_t servo, uint16_t microseconds) {
+  if (!validServo(servo)) return;
+  servoChannelPulse(RB_SERVO_CH_MIN + servo - 1, microseconds);
 }
 
-void RBNexusBoard::servoDetach(uint8_t channel) {
-  if (channel < RB_SERVO_CH_MIN || channel > RB_SERVO_CH_MAX) return;
-  setPWMDuty(channel, 0);
+void RBNexusBoard::servoAngle(uint8_t servo, uint8_t degrees, uint16_t minUs, uint16_t maxUs) {
+  if (!validServo(servo) || minUs > maxUs) return;
+  if (degrees > 180) degrees = 180;
+  uint16_t us = minUs + (uint16_t)(((uint32_t)degrees * (maxUs - minUs)) / 180UL);
+  servoChannelPulse(RB_SERVO_CH_MIN + servo - 1, us);
 }
 
-// --- Quadrature Encoders ---
+void RBNexusBoard::servoRelease(uint8_t servo) {
+  if (!validServo(servo)) return;
+  pcaDuty(RB_SERVO_CH_MIN + servo - 1, 0);
+}
+
+// =============================================================================
+// Quadrature encoders
+// =============================================================================
 void RBNexusBoard::encoderBegin() {
   if (_encodersInitialized) return;
 
@@ -533,7 +624,7 @@ void RBNexusBoard::encoderBegin() {
   _encodersInitialized = true;
 }
 
-int32_t RBNexusBoard::encoderRead(uint8_t encId) {
+int32_t RBNexusBoard::encoderTicks(uint8_t encId) {
   if (encId < 1 || encId > 4) return 0;
   return s_encTicks[encId - 1];
 }
@@ -545,10 +636,7 @@ void RBNexusBoard::encoderReset(uint8_t encId) {
 }
 
 void RBNexusBoard::encoderResetAll() {
-  for (uint8_t i = 0; i < 4; ++i) {
-    s_encTicks[i] = 0;
-    _lastEncTicks[i] = 0;
-  }
+  for (uint8_t id = 1; id <= 4; ++id) encoderReset(id);
 }
 
 float RBNexusBoard::encoderRPM(uint8_t encId) {
@@ -556,17 +644,9 @@ float RBNexusBoard::encoderRPM(uint8_t encId) {
   return _currentRPM[encId - 1];
 }
 
-int8_t RBNexusBoard::encoderDirection(uint8_t encId) {
-  if (encId < 1 || encId > 4) return 0;
-  float rpm = _currentRPM[encId - 1];
-  if (rpm > 0.5f) return 1;
-  if (rpm < -0.5f) return -1;
-  return 0;
-}
-
-void RBNexusBoard::encoderSetPPR(uint8_t encId, uint16_t ppr) {
-  if (encId < 1 || encId > 4 || ppr == 0) return;
-  _encPPR[encId - 1] = ppr;
+void RBNexusBoard::encoderSetPPR(uint8_t encId, uint16_t ticksPerRev) {
+  if (encId < 1 || encId > 4 || ticksPerRev == 0) return;
+  _encPPR[encId - 1] = ticksPerRev;
 }
 
 void RBNexusBoard::updateEncodersRPM() {
@@ -580,7 +660,7 @@ void RBNexusBoard::updateEncodersRPM() {
       float revs = (float)deltaTicks / (float)_encPPR[i];
       float rawRPM = (revs / dt) * 60.0f;
 
-      // Low-pass filter for smooth RPM readout
+      // Low-pass filter for a smooth RPM readout
       _currentRPM[i] = (_currentRPM[i] * 0.7f) + (rawRPM * 0.3f);
       _lastEncTicks[i] = currentTicks;
       _lastEncTime[i] = now;
@@ -588,11 +668,9 @@ void RBNexusBoard::updateEncodersRPM() {
   }
 }
 
-// --- I2C Bus Utilities ---
-bool RBNexusBoard::i2cBegin(uint32_t freq) {
-  return Wire.begin(RB_PIN_I2C_SDA, RB_PIN_I2C_SCL, freq);
-}
-
+// =============================================================================
+// I2C
+// =============================================================================
 int RBNexusBoard::i2cScan(Print* out) {
   int found = 0;
   if (out) out->println("Scanning I2C bus (SDA=21, SCL=22)...");
@@ -614,7 +692,9 @@ int RBNexusBoard::i2cScan(Print* out) {
   return found;
 }
 
-// --- CAN Bus (TWAI) Implementation ---
+// =============================================================================
+// CAN Bus (TWAI)
+// =============================================================================
 bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
   if (txPin < 0 || rxPin < 0) {
     Serial.println("[CAN] TX/RX pins must be configured with valid GPIO numbers.");
@@ -629,8 +709,8 @@ bool RBNexusBoard::canBegin(uint32_t baudRate, int txPin, int rxPin) {
   switch (baudRate) {
     case 125000:  t_config = TWAI_TIMING_CONFIG_125KBITS(); break;
     case 250000:  t_config = TWAI_TIMING_CONFIG_250KBITS(); break;
+    case 500000:  t_config = TWAI_TIMING_CONFIG_500KBITS(); break;
     case 1000000: t_config = TWAI_TIMING_CONFIG_1MBITS(); break;
-    case 500000: t_config = TWAI_TIMING_CONFIG_500KBITS(); break;
     default: return false;
   }
 
@@ -666,17 +746,16 @@ bool RBNexusBoard::canSend(uint32_t id, const uint8_t* data, uint8_t len, bool e
 bool RBNexusBoard::canReceive(uint32_t& id, uint8_t* data, uint8_t& len, bool& ext) {
   if (!_canInitialized || !data) return false;
   twai_message_t msg = {};
-  if (twai_receive(&msg, pdMS_TO_TICKS(10)) == ESP_OK) {
-    id = msg.identifier;
-    ext = (msg.extd == 1);
-    if (msg.rtr || msg.data_length_code > 8) return false;
-    len = msg.data_length_code;
-    for (uint8_t i = 0; i < len; ++i) {
-      data[i] = msg.data[i];
-    }
-    return true;
+  if (twai_receive(&msg, pdMS_TO_TICKS(10)) != ESP_OK) return false;
+  // Ignore remote frames without touching the caller's variables.
+  if (msg.rtr || msg.data_length_code > 8) return false;
+  id = msg.identifier;
+  ext = (msg.extd == 1);
+  len = msg.data_length_code;
+  for (uint8_t i = 0; i < len; ++i) {
+    data[i] = msg.data[i];
   }
-  return false;
+  return true;
 }
 
 void RBNexusBoard::canStop() {
@@ -687,7 +766,9 @@ void RBNexusBoard::canStop() {
   }
 }
 
-// --- Wi-Fi Utilities ---
+// =============================================================================
+// Wi-Fi
+// =============================================================================
 bool RBNexusBoard::wifiConnected() {
   return WiFi.status() == WL_CONNECTED;
 }
@@ -701,6 +782,7 @@ String RBNexusBoard::wifiIP() {
 }
 
 bool RBNexusBoard::wifiConnect(const char* ssid, const char* pass, uint32_t timeoutMs) {
+  if (!ssid) return false;
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, pass);
   unsigned long start = millis();
@@ -710,17 +792,18 @@ bool RBNexusBoard::wifiConnect(const char* ssid, const char* pass, uint32_t time
   return WiFi.status() == WL_CONNECTED;
 }
 
-// --- Safety Watchdog ---
-void RBNexusBoard::enableWatchdog(uint32_t timeoutMs) {
+// =============================================================================
+// Safety watchdog
+// =============================================================================
+void RBNexusBoard::watchdogStart(uint32_t timeoutMs) {
   _watchdogEnabled = true;
   _watchdogTimeoutMs = timeoutMs;
-  feedWatchdog();
+  watchdogFeed();
 }
 
-void RBNexusBoard::feedWatchdog() {
+void RBNexusBoard::watchdogFeed() {
   _lastWatchdogFeed = millis();
 }
 
-// Global instances
+// Global instance
 RBNexusBoard RB;
-RBNexusBoard& RB_Nexus = RB;

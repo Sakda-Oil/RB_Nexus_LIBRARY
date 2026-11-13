@@ -9,71 +9,71 @@ int main() {
   assert(!RB.imuBegin(RBIMUType::MPU9250)); // ACK but wrong identity
   Wire.registers[0x75]=0x71;
   assert(RB.imuBegin(RBIMUType::MPU9250,0x68));
-  assert(!RB.imuDataFresh());
+  assert(!RB.imuFresh());
   fakeMPUNew=true; assert(RB.imuUpdate());
-  assert(RB.imuDataFresh() && RB.imuOrientationFresh());
+  assert(RB.imuFresh() && RB.imuOrientationFresh());
   assert(fabsf(RB.accelZ()-9.80665f)<0.0001f);
   assert(fabsf(RB.gyroX()-3.14159265f)<0.0001f);
   assert(fabsf(RB.magY()-10)<0.0001f);
-  fakeNow+=501; assert(!RB.imuDataFresh());
+  fakeNow+=501; assert(!RB.imuFresh());
   puts("PASS MPU identity, SI units and stale-data detection");
 
   fakeBNOFound=true;
   assert(RB.imuBegin()); assert(RB.imuType()==RBIMUType::BNO085);
   sh2_SensorValue_t a={}; a.sensorId=SH2_ACCELEROMETER; a.un.accelerometer.z=9.81f;
-  fakeEvents.push_back(a); RB.imuUpdate(); assert(!RB.imuDataFresh());
+  fakeEvents.push_back(a); RB.imuUpdate(); assert(!RB.imuFresh());
   sh2_SensorValue_t g={}; g.sensorId=SH2_GYROSCOPE_CALIBRATED; g.un.gyroscope.x=1;
-  fakeEvents.push_back(g); RB.imuUpdate(); assert(RB.imuDataFresh());
+  fakeEvents.push_back(g); RB.imuUpdate(); assert(RB.imuFresh());
   assert(!RB.imuOrientationFresh());
   sh2_SensorValue_t q={}; q.sensorId=SH2_ROTATION_VECTOR; q.un.rotationVector.real=2;
   fakeEvents.push_back(q); RB.imuUpdate();
   assert(RB.imuOrientationFresh() && RB.quaternionW()==1);
   assert(fabsf(RB.roll())<0.001f);
   fakeNow+=501; fakeEvents.push_back(g); RB.imuUpdate();
-  assert(!RB.imuDataFresh()); // A stream of gyro events cannot refresh old acceleration.
+  assert(!RB.imuFresh()); // A stream of gyro events cannot refresh old acceleration.
   puts("PASS BNO selection, independent report freshness and quaternion normalization");
 
-  fakeBNOReset=true; RB.imuUpdate(); assert(!RB.imuDataFresh());
-  fakeEvents.push_back(a); fakeEvents.push_back(g); RB.imuUpdate(); assert(RB.imuDataFresh());
-  fakeBNOReset=true; fakeBNOEnable=false; RB.imuUpdate(); assert(!RB.isIMUAvailable());
+  fakeBNOReset=true; RB.imuUpdate(); assert(!RB.imuFresh());
+  fakeEvents.push_back(a); fakeEvents.push_back(g); RB.imuUpdate(); assert(RB.imuFresh());
+  fakeBNOReset=true; fakeBNOEnable=false; RB.imuUpdate(); assert(!RB.imuReady());
   assert(!RB.imuBegin(RBIMUType::MPU9250,0x4A));
   puts("PASS BNO reset recovery, report failure and explicit address validation");
 
   fakeBNOFound=false; Wire.registers[0x75]=0x68;
   assert(RB.imuBegin()); assert(RB.imuType()==RBIMUType::MPU6050);
   assert(Wire.registers[0x1B]==0x08 && Wire.registers[0x1C]==0x08);
-  assert(!RB.imuDataFresh() && !RB.imuOrientationFresh());
+  assert(!RB.imuFresh() && !RB.imuOrientationFresh());
   Wire.registers[0x3A]=1;
   Wire.registers[0x3B]=0xE0; Wire.registers[0x3C]=0; // -1g at +/-4g
   Wire.registers[0x43]=0x2E; Wire.registers[0x44]=0x0E; // +180 deg/s
-  assert(RB.imuUpdate()); assert(RB.imuDataFresh());
+  assert(RB.imuUpdate()); assert(RB.imuFresh());
   assert(fabsf(RB.accelX()+9.80665f)<0.0001f);
   assert(fabsf(RB.gyroX()-3.14159265f)<0.0001f);
   assert(!RB.imuOrientationFresh() && isnan(RB.magX()) && isnan(RB.yaw()));
   fakeNow+=501; Wire.shortRead=0;
-  assert(!RB.imuUpdate() && !RB.imuDataFresh());
+  assert(!RB.imuUpdate() && !RB.imuFresh());
   Wire.shortRead = -1;
   Wire.registers[0x75]=0x70; // MPU6500 identity, not proof of module authenticity
   assert(RB.imuBegin(RBIMUType::Auto));
   assert(RB.imuType()==RBIMUType::MPU6500);
-  assert(std::string(RB.imuModelName()) == "MPU6500 (6-axis)");
+  assert(std::string(RB.imuName()) == "MPU6500 (6-axis)");
   assert(RB.imuBegin(RBIMUType::MPU9250)); // fallback when labeled MPU9250 but chip is MPU6500
   assert(RB.imuType()==RBIMUType::MPU6500);
   assert(RB.imuBegin(RBIMUType::MPU6500,0x69));
   assert(Wire.registers[0x1D]==0x03);
-  assert(RB.imuUpdate() && RB.imuDataFresh());
+  assert(RB.imuUpdate() && RB.imuFresh());
   assert(fabsf(RB.accelX()+9.80665f)<0.0001f);
   assert(fabsf(RB.gyroX()-3.14159265f)<0.0001f);
   assert(!RB.imuOrientationFresh() && isnan(RB.magX()) && isnan(RB.quaternionW()));
   Wire.registers[0x3A]=0; fakeNow+=501;
-  assert(!RB.imuUpdate() && !RB.imuDataFresh());
+  assert(!RB.imuUpdate() && !RB.imuFresh());
   Wire.registers[0x75]=0x68;
   assert(!RB.imuBegin(RBIMUType::MPU6500));
   Wire.registers[0x75]=0x72;
   assert(!RB.imuBegin()); // Do not accept unverified WHO_AM_I values.
   Wire.registers[0x75]=0x73;
   assert(RB.imuBegin(RBIMUType::MPU9250));
-  assert(std::string(RB.imuModelName()) == "MPU9255 + AK8963");
+  assert(std::string(RB.imuName()) == "MPU9255 + AK8963");
   fakeMPUSetup=false;
   assert(!RB.imuBegin()); // A missing magnetometer is not a verified 9-axis device.
   fakeMPUSetup=true;
@@ -82,29 +82,39 @@ int main() {
 
   Wire.registers[0x75]=0x70; Wire.registers[0x3A]=1;
   assert(RB.imuBegin(RBIMUType::MPU6500));
-  assert(isnan(RB.imuRotationZ()) && !RB.imuRotationZFresh());
+  assert(isnan(RB.heading()) && !RB.headingFresh());
   Wire.registers[0x47]=0x17; Wire.registers[0x48]=0x07; // 5895 = 90 deg/s
   RB.imuUpdate();
   for (int i=0; i<50; ++i) { fakeNow+=20; RB.imuUpdate(); }
-  assert(fabsf(RB.imuRotationZ()+90)<0.01f && RB.imuRotationZFresh());
+  assert(fabsf(RB.heading()+90)<0.01f && RB.headingFresh());
   assert(!RB.imuOrientationFresh() && isnan(RB.yaw()));
-  assert(!RB.imuResetRotationZ(NAN) && !RB.imuSetGyroZBias(INFINITY));
-  assert(RB.imuResetRotationZ(10));
-  assert(RB.imuSetGyroZBias(90*DEG_TO_RAD));
+  assert(!RB.resetHeading(NAN) && !RB.setHeadingBias(INFINITY));
+  assert(RB.resetHeading(10));
+  assert(RB.setHeadingBias(90*DEG_TO_RAD));
   RB.imuUpdate(); fakeNow+=100; RB.imuUpdate();
-  assert(fabsf(RB.imuRotationZ()-10)<0.01f);
-  RB.imuSetGyroZBias(0); RB.imuResetRotationZ();
+  assert(fabsf(RB.heading()-10)<0.01f);
+  RB.setHeadingBias(0); RB.resetHeading();
   Wire.registers[0x47]=0xE8; Wire.registers[0x48]=0xF9; // -90 deg/s (right turn)
   RB.imuUpdate(); fakeNow+=100; RB.imuUpdate();
-  assert(fabsf(RB.imuRotationZ()-9)<0.01f);
+  assert(fabsf(RB.heading()-9)<0.01f);
   Wire.registers[0x3A]=0; fakeNow+=501;
-  assert(!RB.imuUpdate() && !RB.imuRotationZFresh());
+  assert(!RB.imuUpdate() && !RB.headingFresh());
   Wire.registers[0x3A]=1; RB.imuUpdate(); // Gap is skipped, not extrapolated.
-  assert(fabsf(RB.imuRotationZ()-9)<0.01f);
-  fakeNow=4294960; RB.imuResetRotationZ(); RB.imuUpdate();
+  assert(fabsf(RB.heading()-9)<0.01f);
+  fakeNow=4294960; RB.resetHeading(); RB.imuUpdate();
   fakeNow+=20; RB.imuUpdate(); // micros() wraps here
-  assert(fabsf(RB.imuRotationZ()-1.8f)<0.01f);
+  assert(fabsf(RB.heading()-1.8f)<0.01f);
   puts("PASS relative Z degrees, bias, reset, direction (right positive, left negative), stale gaps and timer wrap");
+
+  RB.resetHeading(); RB.imuUpdate(); fakeNow+=20; RB.imuUpdate();
+  uint32_t turnStart=millis(); float startHeading=RB.heading();
+  assert(RB.turnDegrees(45, 40, 2000));      // -90 deg/s gyro = turning right
+  float turned=RB.heading()-startHeading;
+  assert(turned>=45 && turned<46 && millis()-turnStart<1000);
+  assert(!RB.turnDegrees(-45, 40, 2000));    // turning the wrong way: times out
+  Wire.registers[0x47]=0; Wire.registers[0x48]=0;
+  assert(!RB.turnDegrees(30, 40, 300));      // no rotation: times out and stops
+  puts("PASS turnDegrees reaches the IMU target and times out safely");
 
   fakeBNOFound=true; fakeBNOEnable=true;
   assert(RB.imuBegin(RBIMUType::BNO085));
@@ -112,12 +122,12 @@ int main() {
   g.timestamp=1000000; fakeEvents.push_back(g);
   g.timestamp=1100000; fakeEvents.push_back(g);
   RB.imuUpdate(); // Both reports received in the same host millisecond.
-  assert(fabsf(RB.imuRotationZ()+9)<0.01f);
-  fakeBNOReset=true; RB.imuUpdate(); assert(!RB.imuRotationZFresh());
+  assert(fabsf(RB.heading()+9)<0.01f);
+  fakeBNOReset=true; RB.imuUpdate(); assert(!RB.headingFresh());
   puts("PASS BNO queued gyro sensor timestamps and reset freshness");
 
   assert(RB.imuBegin(RBIMUType::BNO085));
-  assert(RB.imuGyroSampleCount()==0);
+  assert(RB.imuSampleCount()==0);
   // Regression: acceleration + gyro + rotation share each SHTP packet.
   // The old single-value wrapper returned only rotation, losing every gyro sample.
   for (int i=0; i<100; ++i) {
@@ -126,16 +136,16 @@ int main() {
     fakeNow+=20;
     assert(RB.imuUpdate());
   }
-  assert(RB.imuGyroSampleCount()==100);
-  assert(RB.imuDataFresh() && RB.imuOrientationFresh() && RB.imuRotationZFresh());
-  assert(fabsf(RB.imuRotationZ()+178.2f)<0.02f); // 99 intervals, left negative
-  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==100); // No duplicate samples
+  assert(RB.imuSampleCount()==100);
+  assert(RB.imuFresh() && RB.imuOrientationFresh() && RB.headingFresh());
+  assert(fabsf(RB.heading()+178.2f)<0.02f); // 99 intervals, left negative
+  assert(!RB.imuUpdate() && RB.imuSampleCount()==100); // No duplicate samples
   fakeBNODecodeOK=false; fakeEvents.push_back(g);
-  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==100);
+  assert(!RB.imuUpdate() && RB.imuSampleCount()==100);
   fakeBNODecodeOK=true; g.un.gyroscope.z=NAN; fakeEvents.push_back(g);
-  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==100);
+  assert(!RB.imuUpdate() && RB.imuSampleCount()==100);
   fakeBNOResetOnService=true; RB.imuUpdate();
-  assert(!RB.imuDataFresh() && !RB.imuRotationZFresh());
+  assert(!RB.imuFresh() && !RB.headingFresh());
   puts("PASS BNO batched reports retain all gyro samples, decoding errors and in-service resets");
 
   fakeBNORelativeTime=true;
@@ -148,9 +158,9 @@ int main() {
   for (int i=0; i<=50; ++i) {
     fakeEvents={a,g,q}; RB.imuUpdate(); fakeNow+=20;
   }
-  assert(RB.imuGyroSampleCount()==51);
-  assert(fabsf(RB.angleZ()-90)<0.02f);
-  assert(!RB.imuUpdate() && RB.imuGyroSampleCount()==51);
+  assert(RB.imuSampleCount()==51);
+  assert(fabsf(RB.heading()-90)<0.02f);
+  assert(!RB.imuUpdate() && RB.imuSampleCount()==51);
   puts("PASS BNO I2C missing transfer timestamp: right turn reaches +90 degrees");
 
   assert(RB.imuBegin(RBIMUType::BNO085)); // Reinstall HAL without recursive wrapping.
@@ -161,15 +171,15 @@ int main() {
     g.timestamp=0; fakeEvents.push_back(g);
     fakeEvents.push_back(q); RB.imuUpdate(); fakeNow+=40;
   }
-  assert(RB.imuGyroSampleCount()==52);
-  assert(fabsf(RB.angleZ()+91.8f)<0.03f); // 51 * 20 ms, left negative.
-  float before=RB.angleZ();
+  assert(RB.imuSampleCount()==52);
+  assert(fabsf(RB.heading()+91.8f)<0.03f); // 51 * 20 ms, left negative.
+  float before=RB.heading();
   fakeBNOResetOnService=true; RB.imuUpdate();
-  assert(!RB.imuRotationZFresh());
+  assert(!RB.headingFresh());
   fakeNow+=1000; fakeEvents={g}; RB.imuUpdate();
-  assert(fabsf(RB.angleZ()-before)<0.001f); // Do not integrate across reset.
+  assert(fabsf(RB.heading()-before)<0.001f); // Do not integrate across reset.
   fakeNow+=20; fakeEvents={g}; RB.imuUpdate();
-  assert(fabsf(RB.angleZ()-(before-1.8f))<0.02f);
+  assert(fabsf(RB.heading()-(before-1.8f))<0.02f);
   puts("PASS BNO packet-relative sample spacing, clock wrap, rebegin and reset");
 
   // Future vendor HALs may provide an interrupt timestamp; retain that value.
@@ -179,6 +189,6 @@ int main() {
     fakeBNOVendorAnchor=1000000+i*20000;
     fakeEvents={g}; RB.imuUpdate(); fakeNow+=10; // Different host poll spacing.
   }
-  assert(fabsf(RB.angleZ()+90)<0.02f);
+  assert(fabsf(RB.heading()+90)<0.02f);
   puts("PASS BNO vendor-provided transfer timestamps take precedence");
 }
